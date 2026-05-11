@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>用户主页 - 一起算算</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    .back-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 24px; position: sticky; top: 0; z-index: 100;
+      background: var(--nav-bg); backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .btn-back {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 18px; cursor: pointer; padding: 4px 8px;
+      border-radius: 8px; transition: background .15s; line-height: 1;
+    }
+    .btn-back:hover { background: rgba(124,58,237,.1); }
+    .back-title { font-size: 16px; font-weight: 700; }
+
+    .profile-header {
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .profile-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: linear-gradient(160deg, rgba(124,58,237,0.3) 0%, rgba(139,92,246,0.1) 80%);
+    }
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--gradient-purple);
+      border: 4px solid var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 28px;
+      font-weight: 600;
+      z-index: 1;
+      margin-bottom: 12px;
+    }
+    .profile-name {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .profile-sign {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .profile-mbti {
+      background: rgba(124,58,237,0.1);
+      color: #a78bfa;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .profile-location {
+      color: var(--text-muted);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .profile-action-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .profile-btn {
+      background: rgba(124,58,237,0.1);
+      border: 1px solid rgba(124,58,237,0.3);
+      color: #a78bfa;
+      border-radius: 50px;
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .profile-btn:hover {
+      background: rgba(124,58,237,0.15);
+    }
+    .profile-btn.primary {
+      background: var(--gradient-purple);
+      border: none;
+      color: white;
+    }
+
+    .profile-section {
+      padding: 16px;
+      border-top: 8px solid var(--bg-subtle);
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .profile-stat {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 16px 10px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #a78bfa;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .big-three {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .big-three-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .big-three-emoji {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+    .big-three-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .big-three-value {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .friend-status {
+      margin-top: 10px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 0;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="back-bar">
+    <button class="btn-back" onclick="history.back()">←</button>
+    <span class="back-title">用户主页</span>
+  </div>
+
+  <div id="profile-content">
+    <div class="loading">
+      <span class="spinner"></span>
+      <p style="margin-top:10px;font-size:13px">加载用户信息...</p>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/static/index.html" class="nav-item"><span class="nav-icon">🏠</span><span>首页</span></a>
+    <a href="/static/chat.html" class="nav-item"><span class="nav-icon">🤖</span><span>AI问答</span></a>
+    <a href="/static/community.html" class="nav-item active"><span class="nav-icon">💫</span><span>社区</span></a>
+    <a href="/static/me.html" class="nav-item"><span class="nav-icon">👤</span><span>我的</span></a>
+  </nav>
+
+  <script src="/static/common.js"></script>
+  <script>
+    // 获取URL参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
+    let userData = null;
+    let friendStatus = null; // null = 未知, false = 非好友, true = 已是好友
+
+    async function init() {
+      if (!Auth.requireLogin()) return;
+
+      if (!userId) {
+        toast('用户ID不存在', 'error');
+        setTimeout(() => history.back(), 1000);
+        return;
+      }
+
+      try {
+        // 获取用户数据
+        userData = await api.get(`/api/user/${userId}`);
+
+        // 获取好友状态
+        try {
+          const result = await api.get(`/api/friends/check/${userId}`);
+          friendStatus = result.is_friend;
+        } catch (err) {
+          console.error('Failed to check friend status:', err);
+        }
+
+        renderProfile();
+      } catch (err) {
+        console.error('获取用户信息失败:', err);
+        document.getElementById('profile-content').innerHTML = `
+          <div style="text-align:center;padding:40px;color:var(--text-muted)">
+            <p>获取用户信息失败</p>
+            <p style="margin-top:8px;font-size:13px">${err.message}</p>
+            <div style="margin-top:20px">
+              <button class="btn-primary" onclick="loadMockProfile()">使用模拟数据</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function loadMockProfile() {
+      // 模拟用户数据
+      userData = {
+        user: {
+          id: parseInt(userId),
+          name: `用户${userId}`,
+          email: `user${userId}@example.com`
+        },
+        profile: {
+          mbti: "INFJ",
+          location: "北京"
+        },
+        astral_config: {
+          sun_sign_cn: "天蝎座",
+          moon_sign_cn: "双子座",
+          asc_sign_cn: "处女座"
+        }
+      };
+
+      // 模拟好友状态
+      friendStatus = false;
+
+      renderProfile();
+      toast('已加载模拟数据', 'info');
+    }
+
+    function renderProfile() {
+      if (!userData) return;
+
+      const user = userData.user;
+      const profile = userData.profile || {};
+      const astral = userData.astral_config || {};
+
+      const avatarLetter = user.name.charAt(0);
+      const sunSign = astral.sun_sign_cn || '未知';
+      const moonSign = astral.moon_sign_cn || '未知';
+      const ascSign = astral.asc_sign_cn || '未知';
+      const mbti = profile.mbti || '未知';
+      const location = profile.location || '未知';
+
+      // 根据好友状态显示不同按钮
+      const friendActionButton = friendStatus === null ? '' :
+        friendStatus ?
+        `<button class="profile-btn" onclick="removeFriend(${userId})">
+          <span>✓</span><span>已是好友</span>
+        </button>` :
+        `<button class="profile-btn" onclick="addFriend(${userId})">
+          <span>+</span><span>添加好友</span>
+        </button>`;
+
+      document.getElementById('profile-content').innerHTML = `
+        <div class="profile-header">
+          <div class="profile-bg"></div>
+          <div class="profile-avatar">${avatarLetter}</div>
+          <div class="profile-name">${user.name}</div>
+
+          <div class="profile-sign">
+            <span>☀️ ${sunSign}</span>
+            <span>🌙 ${moonSign}</span>
+            <span>⬆️ ${ascSign}</span>
+          </div>
+
+          ${mbti !== '未知' ? `<div class="profile-mbti">${mbti}</div>` : ''}
+
+          ${location !== '未知' ? `
+          <div class="profile-location">
+            <span>${svgIcon('pin') || '📍'}</span><span>${location}</span>
+          </div>
+          ` : ''}
+
+          <div class="profile-action-btns">
+            <button class="profile-btn primary" onclick="startChat(${userId})">
+              <span>💬</span><span>发起聊天</span>
+            </button>
+            ${friendActionButton}
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="section-title">星盘信息</div>
+          <div class="big-three">
+            <div class="big-three-item">
+              <div class="big-three-emoji">☀️</div>
+              <div class="big-three-label">太阳星座</div>
+              <div class="big-three-value">${sunSign}</div>
+            </div>
+            <div class="big-three-item">
+              <div class="big-three-emoji">🌙</div>
+              <div class="big-three-label">月亮星座</div>
+              <div class="big-three-value">${moonSign}</div>
+            </div>
+            <div class="big-three-item">
+              <div class="big-three-emoji">⬆️</div>
+              <div class="big-three-label">上升星座</div>
+              <div class="big-three-value">${ascSign}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 发起聊天
+    async function startChat(targetUserId) {
+      try {
+        const result = await api.post('/api/chats', { target_user_id: targetUserId });
+        window.location.href = `/static/messages.html?room=${result.room_id}`;
+      } catch (err) {
+        toast(`聊天创建失败: ${err.message}，将使用模拟功能`, 'warning');
+        // 模拟跳转
+        setTimeout(() => {
+          window.location.href = `/static/messages.html?room=mock_${targetUserId}`;
+        }, 1000);
+      }
+    }
+
+    // 添加好友
+    async function addFriend(targetUserId) {
+      try {
+        await api.post('/api/friends', { friend_id: targetUserId });
+        friendStatus = true;
+        toast('已添加好友', 'success');
+        renderProfile();
+      } catch (err) {
+        toast(`添加好友失败: ${err.message}，将使用模拟功能`, 'warning');
+        // 模拟添加好友
+        friendStatus = true;
+        renderProfile();
+      }
+    }
+
+    // 删除好友
+    async function removeFriend(targetUserId) {
+      try {
+        await api.delete(`/api/friends/${targetUserId}`);
+        friendStatus = false;
+        toast('已移除好友', 'success');
+        renderProfile();
+      } catch (err) {
+        toast(`移除好友失败: ${err.message}，将使用模拟功能`, 'warning');
+        // 模拟移除好友
+        friendStatus = false;
+        renderProfile();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

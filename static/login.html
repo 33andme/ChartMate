@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>登录 / 注册 - 一起算算</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+
+    .login-wrapper { width: 100%; max-width: 400px; }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .login-logo .logo-icon {
+      font-size: 64px;
+      display: block;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 0 20px rgba(124, 58, 237, 0.6));
+      animation: float 3s ease-in-out infinite;
+    }
+    .login-logo h1 {
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .login-logo p { color: var(--text-muted); font-size: 13px; margin-top: 5px; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* ── Tab 切换 ── */
+    .tab-bar {
+      display: flex;
+      background: rgba(255,255,255,0.04);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-subtle);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--gradient-purple);
+      color: white;
+      box-shadow: 0 2px 8px rgba(124,58,237,0.4);
+    }
+
+    /* ── 卡片 ── */
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 24px 20px;
+    }
+
+    /* ── 验证码行 ── */
+    .code-row { display: flex; gap: 10px; }
+    .code-row .input-field { flex: 1; }
+    .btn-send-code {
+      flex-shrink: 0;
+      background: rgba(124, 58, 237, 0.12);
+      border: 1px solid rgba(124, 58, 237, 0.4);
+      color: #a78bfa;
+      border-radius: 12px;
+      padding: 0 14px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      min-width: 88px;
+      transition: all 0.2s;
+    }
+    .btn-send-code:hover { background: rgba(124, 58, 237, 0.22); }
+    .btn-send-code:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── 密码输入框带眼睛 ── */
+    .pwd-row { position: relative; }
+    .pwd-row .input-field { padding-right: 44px; }
+    .pwd-eye {
+      position: absolute;
+      right: 14px; top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+    }
+
+    /* ── 测试提示 ── */
+    .test-tip {
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 10px;
+      padding: 9px 13px;
+      font-size: 12px;
+      color: #fbbf24;
+      margin-bottom: 16px;
+    }
+
+    /* ── 星空背景 ── */
+    .stars-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+    .star {
+      position: absolute; background: white; border-radius: 50%;
+      animation: twinkle var(--dur) ease-in-out infinite; opacity: 0;
+    }
+    @keyframes twinkle { 0%,100%{opacity:0} 50%{opacity:var(--op)} }
+  </style>
+</head>
+<body>
+  <div class="stars-bg" id="stars-bg"></div>
+
+  <div class="login-wrapper">
+    <div class="login-logo">
+      <span class="logo-icon">🔮</span>
+      <h1>一起算算</h1>
+      <p>探索宇宙，读懂自己</p>
+    </div>
+
+    <!-- Tab 切换 -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">登录</button>
+      <button class="tab-btn" id="tab-register" onclick="switchTab('register')">注册</button>
+    </div>
+
+    <div class="login-card">
+      <div class="test-tip" id="test-tip">
+        💡 验证码将发送至您的邮箱，请注意查收。如未收到，请检查垃圾邮件。
+      </div>
+
+      <!-- ── 登录表单 ── -->
+      <div id="form-login">
+        <div class="input-group">
+          <label>邮箱</label>
+          <input type="email" id="login-email" class="input-field" placeholder="请输入邮箱" autocomplete="email">
+        </div>
+        <div class="input-group">
+          <label>密码</label>
+          <div class="pwd-row">
+            <input type="password" id="login-pwd" class="input-field" placeholder="请输入密码" autocomplete="current-password">
+            <button class="pwd-eye" onclick="togglePwd('login-pwd', this)">👁️</button>
+          </div>
+        </div>
+        <button class="btn-primary" id="btn-login" onclick="doLogin()">登录</button>
+        <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text-muted)">
+          还没有账号？
+          <a href="#" onclick="switchTab('register');return false;" style="color:#a78bfa;text-decoration:none">去注册</a>
+        </p>
+      </div>
+
+      <!-- ── 注册表单 ── -->
+      <div id="form-register" style="display:none">
+        <div class="input-group">
+          <label>邮箱</label>
+          <input type="email" id="reg-email" class="input-field" placeholder="请输入邮箱" autocomplete="email">
+        </div>
+        <div class="input-group">
+          <label>验证码</label>
+          <div class="code-row">
+            <input type="text" id="reg-code" class="input-field" placeholder="6位验证码" maxlength="6" inputmode="numeric">
+            <button class="btn-send-code" id="btn-send-code" onclick="sendCode()">发送验证码</button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>设置密码</label>
+          <div class="pwd-row">
+            <input type="password" id="reg-pwd" class="input-field" placeholder="至少6位密码" autocomplete="new-password">
+            <button class="pwd-eye" onclick="togglePwd('reg-pwd', this)">👁️</button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>确认密码</label>
+          <div class="pwd-row">
+            <input type="password" id="reg-pwd2" class="input-field" placeholder="再次输入密码" autocomplete="new-password">
+            <button class="pwd-eye" onclick="togglePwd('reg-pwd2', this)">👁️</button>
+          </div>
+        </div>
+        <button class="btn-primary" id="btn-register" onclick="doRegister()">注册</button>
+        <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text-muted)">
+          已有账号？
+          <a href="#" onclick="switchTab('login');return false;" style="color:#a78bfa;text-decoration:none">去登录</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script>
+    // 星空背景
+    const bg = document.getElementById('stars-bg');
+    for (let i = 0; i < 80; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2.5 + 0.5;
+      s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${Math.random()*3+2}s;--op:${Math.random()*0.7+0.3};animation-delay:${Math.random()*4}s`;
+      bg.appendChild(s);
+    }
+
+    // 已登录跳转
+    if (Auth.getToken()) window.location.href = '/static/index.html';
+
+    // 读取 URL 参数决定默认 tab
+    const urlTab = new URLSearchParams(location.search).get('tab');
+    if (urlTab === 'register') switchTab('register');
+
+    function switchTab(tab) {
+      document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+      // 注册 tab 不需要每次都展示测试提示（可选）
+    }
+
+    // ── 密码显示切换 ──
+    function togglePwd(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.textContent = show ? '🙈' : '👁️';
+    }
+
+    // ── 发送验证码 ──
+    let countdown = 0;
+    async function sendCode() {
+      const email = document.getElementById('reg-email').value.trim();
+      if (!email || !email.includes('@')) { toast('请输入正确的邮箱', 'error'); return; }
+      if (countdown > 0) return;
+
+      const btn = document.getElementById('btn-send-code');
+      btn.disabled = true;
+      try {
+        const data = await api.post('/api/auth/send-code', { email });
+        toast(`验证码已发送至您的邮箱，请查收${data.debug_code ? `（测试：${data.debug_code}）` : ''}`, 'success');
+        countdown = 60;
+        const timer = setInterval(() => {
+          countdown--;
+          btn.textContent = `${countdown}s`;
+          if (countdown <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = '发送验证码'; }
+        }, 1000);
+      } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false;
+      }
+    }
+
+    // ── 登录 ──
+    async function doLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-pwd').value;
+      if (!email || !email.includes('@')) { toast('请输入正确的邮箱', 'error'); return; }
+      if (!password) { toast('请输入密码', 'error'); return; }
+
+      const btn = document.getElementById('btn-login');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> 登录中...';
+      try {
+        const data = await api.post('/api/auth/login', { email, password });
+        Auth.setToken(data.token);
+        Auth.setUser(data.user);
+        toast(data.message, 'success');
+        setTimeout(() => window.location.href = '/static/index.html', 600);
+      } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '登录';
+      }
+    }
+
+    // ── 注册 ──
+    async function doRegister() {
+      const email = document.getElementById('reg-email').value.trim();
+      const code = document.getElementById('reg-code').value.trim();
+      const pwd = document.getElementById('reg-pwd').value;
+      const pwd2 = document.getElementById('reg-pwd2').value;
+
+      if (!email || !email.includes('@')) { toast('请输入正确的邮箱', 'error'); return; }
+      if (!code || code.length < 4) { toast('请输入验证码', 'error'); return; }
+      if (!pwd || pwd.length < 6) { toast('密码不能少于6位', 'error'); return; }
+      if (pwd !== pwd2) { toast('两次密码不一致', 'error'); return; }
+
+      const btn = document.getElementById('btn-register');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> 注册中...';
+      try {
+        const data = await api.post('/api/auth/register', { email, code, password: pwd });
+        Auth.setToken(data.token);
+        Auth.setUser(data.user);
+        toast(data.message, 'success');
+        setTimeout(() => window.location.href = '/static/index.html', 600);
+      } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '注册';
+      }
+    }
+
+    // Enter 触发
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('login-pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+      document.getElementById('reg-pwd2').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+    });
+  </script>
+</body>
+</html>

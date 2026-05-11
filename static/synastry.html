@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>合盘分析 - 一起算算</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    .back-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 24px; position: sticky; top: 0; z-index: 100;
+      background: var(--nav-bg); backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .nav-svg {
+    width: 22px;
+    height: 22px;
+    vertical-align: middle;
+    margin-right: 6px;
+    }
+    .btn-back {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 18px; cursor: pointer; padding: 4px 8px;
+      border-radius: 8px; transition: background .15s; line-height: 1;
+    }
+    .btn-back:hover { background: rgba(124,58,237,.1); }
+    .back-title { font-size: 16px; font-weight: 700; }
+
+    .page-content { padding: 20px 16px 90px; }
+
+    /* 档案选择器 */
+    .profile-selector {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .selector-title {
+      font-size: 14px; font-weight: 700; margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+    .profile-option {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px; border: 1px solid var(--border-subtle);
+      border-radius: 8px; margin-bottom: 8px;
+      cursor: pointer; transition: all .15s;
+      background: var(--bg-subtle);
+    }
+    .profile-option:hover { background: rgba(124,58,237,.06); }
+    .profile-option.selected {
+      background: rgba(124,58,237,.1);
+      border-color: rgba(124,58,237,.3);
+    }
+    .profile-radio {
+      width: 16px; height: 16px; border: 2px solid var(--border-muted);
+      border-radius: 50%; position: relative;
+    }
+    .profile-option.selected .profile-radio {
+      border-color: var(--primary-500);
+    }
+    .profile-option.selected .profile-radio::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--primary-500);
+    }
+    .profile-info h4 {
+      margin: 0; font-size: 15px; font-weight: 600;
+    }
+    .profile-info p {
+      margin: 2px 0 0; font-size: 12px; color: var(--text-muted);
+    }
+
+    /* 分析按钮 */
+    .analyze-btn {
+      width: 100%; padding: 14px;
+      background: var(--gradient-purple);
+      border: none; border-radius: 10px;
+      color: white; font-size: 16px; font-weight: 600;
+      cursor: pointer; margin-bottom: 20px;
+      transition: transform .15s;
+    }
+    .analyze-btn:hover { transform: translateY(-1px); }
+    .analyze-btn:disabled {
+      background: var(--bg-muted);
+      color: var(--text-muted);
+      cursor: not-allowed; transform: none;
+    }
+
+    /* 结果区域 */
+    .result-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      padding: 16px; margin-bottom: 16px;
+      display: none;
+    }
+    .result-header {
+      text-align: center; margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .couple-info {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 12px;
+    }
+    .person-card {
+      text-align: center; flex: 1;
+    }
+    .person-name {
+      font-size: 16px; font-weight: 700; margin-bottom: 4px;
+    }
+    .person-signs {
+      font-size: 12px; color: var(--text-muted);
+    }
+    .vs-symbol {
+      font-size: 20px; margin: 0 20px; color: var(--primary-500);
+    }
+
+    /* 兼容性分数 */
+    .compatibility-scores {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .score-item {
+      text-align: center; padding: 12px 8px;
+      background: var(--bg-subtle); border-radius: 8px;
+    }
+    .score-value {
+      font-size: 20px; font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .score-label {
+      font-size: 11px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+
+    /* 相位列表 */
+    .aspects-section {
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 14px; font-weight: 700; margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+    .aspect-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px; background: var(--bg-subtle);
+      border-radius: 6px; margin-bottom: 6px;
+    }
+    .aspect-planets {
+      font-size: 13px; font-weight: 600;
+    }
+    .aspect-type {
+      font-size: 11px; padding: 2px 6px;
+      border-radius: 4px; color: white; font-weight: 500;
+    }
+    .aspect-positive { background: #10b981; }
+    .aspect-negative { background: #ef4444; }
+    .aspect-neutral { background: #6b7280; }
+
+    /* 解读文字 */
+    .interpretation {
+      line-height: 1.6; color: var(--text-secondary);
+    }
+    .interpretation h4 {
+      margin: 16px 0 8px; font-size: 14px;
+      color: var(--text-primary);
+    }
+    .interpretation p {
+      margin-bottom: 12px;
+    }
+
+    .loading {
+      text-align: center; padding: 40px;
+      color: var(--text-muted);
+    }
+
+    .error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #dc2626; padding: 12px; border-radius: 6px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="back-bar">
+    <button class="btn-back" onclick="history.back()">←</button>
+    <span class="back-title">合盘分析</span>
+  </div>
+
+  <div class="page-content">
+    <div class="profile-selector">
+      <div class="selector-title">选择第一个档案（甲）</div>
+      <div id="profiles-1"></div>
+    </div>
+
+    <div class="profile-selector">
+      <div class="selector-title">选择第二个档案（乙）</div>
+      <div id="profiles-2"></div>
+    </div>
+
+    <button class="analyze-btn" id="analyze-btn" onclick="analyzeSynastry()" disabled>
+      开始合盘分析
+    </button>
+
+    <div class="result-section" id="result-section">
+      <div class="result-header">
+        <div class="couple-info">
+          <div class="person-card">
+            <div class="person-name" id="person-1-name">--</div>
+            <div class="person-signs" id="person-1-signs">--</div>
+          </div>
+          <div class="vs-symbol">💕</div>
+          <div class="person-card">
+            <div class="person-name" id="person-2-name">--</div>
+            <div class="person-signs" id="person-2-signs">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compatibility-scores" id="compatibility-scores">
+        <!-- 动态填充 -->
+      </div>
+
+      <div class="aspects-section">
+        <div class="section-title">重要相位关系</div>
+        <div id="aspects-list">
+          <!-- 动态填充 -->
+        </div>
+      </div>
+
+      <div class="interpretation" id="interpretation">
+        <!-- 动态填充 -->
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/static/index.html" class="nav-item"><span class="nav-icon"><svg class="icon-item" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+          <linearGradient id="purpleLine2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#5a3d91" stop-opacity="0.2"/>
+              <stop offset="50%" stop-color="#a87bff" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#5a3d91" stop-opacity="0.2"/>
+          </linearGradient>
+          <linearGradient id="purpleFill2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#8c68d6" stop-opacity="0"/>
+              <animate attributeName="stop-opacity" from="0" to="0.35" dur="3s" begin="0.3s" fill="freeze" />
+              <stop offset="100%" stop-color="#704fc2" stop-opacity="0.35"/>
+          </linearGradient>
+      </defs>
+      <path d="M50,15 L80,40 L80,85 L20,85 L20,40 Z" fill="url(#purpleFill2)"/>
+      <rect x="42" y="55" width="16" height="30" fill="url(#purpleFill2)"/>
+      <path d="M50,15 L80,40 L80,85 L20,85 L20,40 Z" fill="none" stroke="url(#purpleLine2)" stroke-width="2.8" stroke-linecap="round">
+          <animate attributeName="stroke-dasharray" from="0 250" to="250 250" dur="4s" repeatCount="indefinite" />
+      </path>
+      <rect x="42" y="55" width="16" height="30" fill="none" stroke="url(#purpleLine2)" stroke-width="2.8">
+          <animate attributeName="stroke-dasharray" from="0 92" to="92 92" dur="4s" repeatCount="indefinite" />
+      </rect>
+      <circle cx="15" cy="35" r="2" fill="#c9b4ff">
+          <animate attributeName="opacity" values="0.2;0.8;0.2" dur="3.2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="85" cy="12" r="2.5" fill="#c9b4ff">
+          <animate attributeName="opacity" values="0.2;0.8;0.2" dur="3.8s" repeatCount="indefinite"/>
+      </circle>
+  </svg></span><span>首页</span></a>
+    <a href="/static/chat.html" class="nav-item"><span class="nav-icon">🤖</span><span>AI问答</span></a>
+    <a href="/static/community.html" class="nav-item"><span class="nav-icon">�</span><span>社区</span></a>
+    <a href="/static/me.html" class="nav-item"><span class="nav-icon">👤</span><span>我的</span></a>
+  </nav>
+
+  <script src="/static/common.js"></script>
+  <script>
+    let profiles = [];
+    let selectedProfile1 = null;
+    let selectedProfile2 = null;
+  
+    async function init() {
+      if (!Auth.requireLogin()) return;
+  
+      try {
+        const response = await api.get('/api/profiles');
+        profiles = response.profiles || [];  // 确保获取正确的数据结构
+        renderProfileOptions();
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+  
+    function renderProfileOptions() {
+      const container1 = document.getElementById('profiles-1');
+      const container2 = document.getElementById('profiles-2');
+  
+      if (!Array.isArray(profiles) || profiles.length === 0) {
+        document.getElementById('analyze-btn').disabled = true;
+        container1.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px">没有找到档案，请先创建档案</p>';
+        container2.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px">请先创建档案</p>';
+        return;
+      }
+  
+      const html = profiles.map(profile => `
+        <div class="profile-option" onclick="selectProfile(${profile.id}, 1)">
+          <div class="profile-radio"></div>
+          <div class="profile-info">
+            <h4>${profile.name || '未命名档案'}</h4>
+            <p>${profile.astral_config?.sun_sign_cn || '未知'} • ${profile.astral_config?.moon_sign_cn || '未知'} • ${profile.astral_config?.asc_sign_cn || '未知'}</p>
+          </div>
+        </div>
+      `).join('');
+  
+      container1.innerHTML = html;
+      container2.innerHTML = html.replace(/selectProfile\((\d+), 1\)/g, 'selectProfile($1, 2)');
+  
+      if (profiles.length < 2) {
+        document.getElementById('analyze-btn').disabled = true;
+        container1.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px">需要至少2个档案才能进行合盘分析</p>';
+        container2.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px">请先创建更多档案</p>';
+      }
+    }
+  
+    function selectProfile(profileId, position) {
+      if (position === 1) {
+        selectedProfile1 = profileId;
+        // 更新选中状态
+        document.querySelectorAll('#profiles-1 .profile-option').forEach(el => {
+          el.classList.remove('selected');
+        });
+        // 修复：更安全的选中元素方式（避免onclick属性匹配的兼容性问题）
+        const targetEl = Array.from(document.querySelectorAll('#profiles-1 .profile-option')).find(el => 
+          el.getAttribute('onclick')?.includes(`${profileId}, 1`)
+        );
+        if (targetEl) targetEl.classList.add('selected');
+      } else {
+        selectedProfile2 = profileId;
+        document.querySelectorAll('#profiles-2 .profile-option').forEach(el => {
+          el.classList.remove('selected');
+        });
+        const targetEl = Array.from(document.querySelectorAll('#profiles-2 .profile-option')).find(el => 
+          el.getAttribute('onclick')?.includes(`${profileId}, 2`)
+        );
+        if (targetEl) targetEl.classList.add('selected');
+      }
+  
+      // 检查是否可以开始分析
+      const canAnalyze = selectedProfile1 && selectedProfile2 && selectedProfile1 !== selectedProfile2;
+      document.getElementById('analyze-btn').disabled = !canAnalyze;
+  
+      if (selectedProfile1 === selectedProfile2 && selectedProfile1) {
+        toast('请选择两个不同的档案', 'warning');
+      }
+    }
+  
+    async function analyzeSynastry() {
+      if (!selectedProfile1 || !selectedProfile2 || selectedProfile1 === selectedProfile2) {
+        toast('请选择两个不同的档案', 'warning');
+        return;
+      }
+  
+      const btn = document.getElementById('analyze-btn');
+      const originalText = btn.textContent;
+      btn.textContent = '分析中...';
+      btn.disabled = true;
+  
+      try {
+        const result = await api.post('/api/synastry', {
+          profile_id1: selectedProfile1,
+          profile_id2: selectedProfile2
+        });
+  
+        renderResult(result);
+        document.getElementById('result-section').style.display = 'block';
+  
+        // 滚动到结果区域
+        setTimeout(() => {
+          document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+  
+      } catch (err) {
+        toast(err.message || '合盘分析失败，请重试', 'error');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }
+  
+    function renderResult(data) {
+      // 核心修复1：调试日志里用data而不是未定义的result
+      console.log("渲染合盘结果:", data); 
+  
+      // 核心修复2：先做数据安全检查，再定义result变量
+      // 确保数据结构完整
+      if (!data || !data.synastry || !data.profiles) {
+        document.getElementById('interpretation').innerHTML = `
+          <div style="color:red;margin:20px 0;text-align:center;">
+            <h4>数据格式错误</h4>
+            <p>无法解析合盘结果数据，请联系管理员</p>
+          </div>
+        `;
+        return;
+      }
+  
+      // 定义result变量（必须在安全检查之后）
+      const result = data.synastry;
+      const profile1 = data.profiles.profile1;
+      const profile2 = data.profiles.profile2;
+  
+      // 核心修复3：安全检查移到result定义之后，且用result而不是未定义的变量
+      // 安全检查，如果缺少关键数据则添加默认值
+      if (!result.aspects) result.aspects = [];
+      if (!result.interpretation) result.interpretation = {};
+  
+      // 基本信息（增加可选链，避免属性不存在报错）
+      document.getElementById('person-1-name').textContent = profile1.name || '未知';
+      document.getElementById('person-1-signs').textContent =
+        `${result.person_1?.sun || '未知'} • ${result.person_1?.moon || '未知'} • ${result.person_1?.asc || '未知'}`;
+  
+      document.getElementById('person-2-name').textContent = profile2.name || '未知';
+      document.getElementById('person-2-signs').textContent =
+        `${result.person_2?.sun || '未知'} • ${result.person_2?.moon || '未知'} • ${result.person_2?.asc || '未知'}`;
+  
+      // 兼容性分数
+      const scores = result.compatibility_scores || {};
+      const scoreLabels = {
+        overall: '整体',
+        love: '爱情',
+        communication: '沟通',
+        values: '价值观',
+        emotional: '情感',
+        friendship: '友谊'
+      };
+  
+      document.getElementById('compatibility-scores').innerHTML = Object.entries(scores).map(([key, value]) => `
+        <div class="score-item">
+          <div class="score-value" style="color: ${getScoreColor(value)}">${value}</div>
+          <div class="score-label">${scoreLabels[key] || key}</div>
+        </div>
+      `).join('');
+  
+      // 相位关系
+      const aspectsHtml = (result.aspects || []).slice(0, 8).map(aspect => `
+        <div class="aspect-item">
+          <div class="aspect-planets">
+            ${aspect.person1_name || profile1.name}的${aspect.person_1_planet_cn || '未知星体'} ${aspect.aspect_cn || '相位'} ${aspect.person2_name || profile2.name}的${aspect.person_2_planet_cn || '未知星体'}
+          </div>
+          <div class="aspect-type ${getAspectClass(aspect.influence || 0)}">
+            ${aspect.aspect_cn || '未知相位'}
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('aspects-list').innerHTML = aspectsHtml || '<p style="color:var(--text-muted);text-align:center">暂无重要相位</p>';
+  
+      // 解读文字（增加默认值，避免空值显示）
+      const interp = result.interpretation || {};
+      document.getElementById('interpretation').innerHTML = `
+        <h4>整体评价</h4>
+        <p>${interp.overall_description || interp.overall || '暂无数据'}</p>
+  
+        <h4>星座元素分析</h4>
+        <p>${interp.element_analysis || interp.elements || '暂无数据'}</p>
+  
+        <h4>互动模式</h4>
+        <p>${interp.dynamics || interp.interaction_pattern || '暂无数据'}</p>
+  
+        <h4>建议</h4>
+        <p>${interp.advice || interp.communication_tips || '暂无数据'}</p>
+      `;
+    }
+  
+    function getScoreColor(score) {
+      // 修复：处理非数字分数的情况
+      const numScore = Number(score);
+      if (isNaN(numScore)) return '#6b7280';
+      if (numScore >= 80) return '#10b981';
+      if (numScore >= 65) return '#f59e0b';
+      if (numScore >= 50) return '#6b7280';
+      return '#ef4444';
+    }
+  
+    function getAspectClass(influence) {
+      // 修复：处理非数字influence的情况
+      const numInfluence = Number(influence);
+      if (isNaN(numInfluence)) return 'aspect-neutral';
+      if (numInfluence > 2) return 'aspect-positive';
+      if (numInfluence < -1) return 'aspect-negative';
+      return 'aspect-neutral';
+    }
+  
+    init();
+  </script>

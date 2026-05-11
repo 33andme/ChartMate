@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>首页 - 一起算算</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(160deg,#130527 0%,#0b0b18 55%);
+      padding: 24px 24px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    body.light .hero {
+      background: linear-gradient(160deg,#e8e0ff 0%,#f2edff 60%);
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -60px;
+      width: 260px; height: 260px;
+      background: radial-gradient(circle,rgba(124,58,237,.3) 0%,transparent 68%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    /* 档案选择器 */
+    .profile-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 16px;
+    }
+    .profile-bar::-webkit-scrollbar { display: none; }
+    .p-chip {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.07);
+      border: 1.5px solid rgba(255,255,255,.1);
+      border-radius: 50px;
+      padding: 7px 15px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+    body.light .p-chip {
+      background: rgba(124,58,237,.07);
+      border-color: rgba(124,58,237,.15);
+    }
+    .p-chip.active {
+      background: rgba(124,58,237,.2);
+      border-color: var(--accent-purple);
+      color: #a78bfa;
+    }
+    .p-chip-add {
+      flex-shrink: 0;
+      background: none;
+      border: 1.5px dashed rgba(124,58,237,.4);
+      color: var(--accent-purple);
+      border-radius: 50px;
+      padding: 7px 15px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all .2s;
+    }
+    .p-chip-add:hover { background: rgba(124,58,237,.08); }
+
+    /* 三星座展示 */
+    .signs-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 4px 0 28px;
+    }
+    .sign-col {
+      flex: 1;
+      text-align: center;
+      padding: 12px 8px;
+    }
+    .sign-col .s-emoji { font-size: 36px; display: block; margin-bottom: 6px; }
+    .sign-col .s-tag {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+    .sign-col .s-name { font-size: 15px; font-weight: 700; }
+    .sign-sep {
+      width: 1px;
+      height: 56px;
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    /* ══ 运势大卡 ══ */
+    .fortune-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 22px 22px 0 0;
+      padding: 24px 24px 28px;
+      margin: 0;
+      position: relative;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .fortune-card:hover { border-color: var(--border-hover); }
+    .fortune-card::after {
+      content: '查看详情 ›';
+      position: absolute;
+      top: 24px; right: 22px;
+      font-size: 12px;
+      color: var(--accent-purple);
+      font-weight: 500;
+    }
+
+    .fc-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .fc-date { font-size: 12px; color: var(--text-muted); }
+
+    /* 总分环 */
+    .score-ring-wrap {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+    .score-ring {
+      position: relative;
+      width: 90px; height: 90px;
+      flex-shrink: 0;
+    }
+    .score-ring svg {
+      transform: rotate(-90deg);
+      width: 90px; height: 90px;
+    }
+    .score-ring .ring-bg {
+      fill: none;
+      stroke: rgba(124,58,237,.15);
+      stroke-width: 7;
+    }
+    .score-ring .ring-fill {
+      fill: none;
+      stroke: url(#ringGrad);
+      stroke-width: 7;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    .score-ring .ring-num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .ring-num .rn-val {
+      font-size: 26px;
+      font-weight: 900;
+      line-height: 1;
+      background: var(--gradient-purple);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .ring-num .rn-label { font-size: 10px; color: var(--text-muted); }
+
+    .score-mini-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .smi {
+      background: rgba(255,255,255,.04);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    body.light .smi { background: rgba(124,58,237,.05); }
+    .smi .smi-label { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; }
+    .smi .smi-bar {
+      height: 3px;
+      background: rgba(255,255,255,.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    body.light .smi .smi-bar { background: rgba(0,0,0,.08); }
+    .smi .smi-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+    .smi .smi-val { font-size: 12px; font-weight: 700; }
+
+    /* ── 快捷入口 ── */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 20px 24px;
+    }
+    .q-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 14px 8px;
+      text-align: center;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: all .2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .q-btn:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(124,58,237,.15);
+    }
+    .q-btn .qi { font-size: 26px; }
+    .q-btn .ql { font-size: 11px; color: var(--text-muted); }
+
+    /* ── 表单行 ── */
+    .form-row { display: flex; gap: 10px; }
+    .form-row .input-group { flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <h1>🔮 一起算算</h1>
+    <div style="display:flex;gap:8px">
+      <button class="top-bar-action" onclick="Theme.toggle()" data-theme-toggle title="切换主题">☀️</button>
+      <button class="top-bar-action top-bar-action--svg" onclick="location.href='/static/me.html'" title="我的"><span data-svg-icon="user"></span></button>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <!-- 档案选择 -->
+    <div class="profile-bar" id="profile-bar">
+      <span style="color:var(--text-muted);font-size:13px;line-height:32px">加载中...</span>
+    </div>
+
+    <!-- 三星座 -->
+    <div class="signs-row">
+      <div class="sign-col">
+        <span class="s-emoji" id="sun-emoji">☀️</span>
+        <div class="s-tag">太阳</div>
+        <div class="s-name" id="sun-sign">--</div>
+      </div>
+      <div class="sign-sep"></div>
+      <div class="sign-col">
+        <span class="s-emoji" id="moon-emoji">🌙</span>
+        <div class="s-tag">月亮</div>
+        <div class="s-name" id="moon-sign">--</div>
+      </div>
+      <div class="sign-sep"></div>
+      <div class="sign-col">
+        <span class="s-emoji" id="asc-emoji">⬆️</span>
+        <div class="s-tag">上升</div>
+        <div class="s-name" id="asc-sign">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 今日运势大卡（可点击跳转详情） -->
+  <div class="fortune-card" id="fortune-card" onclick="goToDetail()">
+    <div style="text-align:center;padding:28px 0;color:var(--text-muted)">
+      <span class="spinner"></span>
+      <p style="margin-top:10px;font-size:13px">正在推算今日运势...</p>
+    </div>
+  </div>
+
+  <!-- 快捷入口 -->
+  <div class="quick-grid">
+    <a href="/static/chat.html" class="q-btn">
+      <span class="qi">🤖</span><span class="ql">AI占星</span>
+    </a>
+    <a href="#" class="q-btn" onclick="goToChart(event)">
+      <span class="qi">🌐</span><span class="ql">完整星盘</span>
+    </a>
+    <a href="/static/community.html" class="q-btn">
+      <span class="qi">💬</span><span class="ql">社区</span>
+    </a>
+    <a href="/static/synastry.html" class="q-btn">
+      <span class="qi">💕</span><span class="ql">合盘分析</span>
+    </a>
+  </div>
+
+  <!-- 底部导航 -->
+  <nav class="bottom-nav">
+    <a href="/static/index.html" class="nav-item active">
+      <span class="nav-icon">🏠</span><span>首页</span>
+    </a>
+    <a href="/static/chat.html" class="nav-item">
+      <span class="nav-icon">🤖</span><span>AI问答</span>
+    </a>
+    <a href="/static/community.html" class="nav-item">
+      <span class="nav-icon">💫</span><span>社区</span>
+    </a>
+    <a href="/static/me.html" class="nav-item">
+      <span class="nav-icon">👤</span><span>我的</span>
+    </a>
+  </nav>
+
+  <!-- SVG渐变定义 -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#667eea"/>
+        <stop offset="100%" stop-color="#f59e0b"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- 新建档案弹窗 -->
+  <div class="modal-overlay" id="add-profile-modal" onclick="this.classList.contains('show')&&event.target===this&&closeModal('add-profile-modal')">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title">✨ 新建档案</div>
+      <div class="input-group">
+        <label>姓名</label>
+        <input class="input-field" id="p-name" placeholder="请输入姓名">
+      </div>
+      <div class="form-row">
+        <div class="input-group">
+          <label>关系</label>
+          <select class="input-field" id="p-rel">
+            <option style="color: #a171e4 !important;">本人</option>
+            <option style="color: #a171e4 !important;">伴侣</option>
+            <option style="color: #a171e4 !important;">父母</option>
+            <option style="color: #a171e4 !important;">朋友</option>
+            <option style="color: #a171e4 !important;">子女</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>性别</label>
+          <select class="input-field" id="p-gender">
+            <option value="" style="color: #a171e4 !important;">不填</option>
+            <option style="color: #a171e4 !important;">男</option>
+            <option style="color: #a171e4 !important;">女</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>出生时间</label>
+        <input class="input-field" id="p-birth" type="datetime-local" value="1995-01-01T12:00">
+      </div>
+      <div class="form-row">
+        <div class="input-group city-select">
+          <label>出生城市</label>
+          <select class="input-field" id="p-bcity">
+            <option value="">选择城市...</option>
+          </select>
+        </div>
+        <div class="input-group city-select">
+          <label>现居城市</label>
+          <select class="input-field" id="p-ccity">
+            <option value="">选择城市...</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>MBTI（可选）</label>
+        <input class="input-field" id="p-mbti" placeholder="如：INFP">
+      </div>
+      <button class="btn-primary" id="btn-create" onclick="createProfile()">
+        🔮 创建并计算星盘
+      </button>
+    </div>
+  </div>
+
+
+
+  <script src="/static/common.js"></script>
+  <script>
+    let profiles = [], currentProfileId = null, lastFortune = null;
+
+    // ── 初始化 ─────────────────────────────────────────
+    async function init() {
+      if (!Auth.requireLogin()) return;
+
+      // 并行加载数据
+      await Promise.all([
+        loadProfiles(),
+        loadCities()
+      ]);
+    }
+
+    // 加载城市列表
+    async function loadCities() {
+      try {
+        const data = await api.get('/api/cities');
+        const groupedCities = data.grouped_cities || {};
+        const otherCities = data.other_cities || [];
+
+        // 填充城市下拉框
+        const birthCitySelect = document.getElementById('p-bcity');
+        const currentCitySelect = document.getElementById('p-ccity');
+
+        // 创建选项
+        let birthCityOptions = '<option value="">选择城市...</option>';
+        let currentCityOptions = '<option value="">选择城市...</option>';
+
+        // 按区域分组添加城市
+        Object.keys(groupedCities).forEach(region => {
+          const cities = groupedCities[region];
+          if (cities.length > 0) {
+            birthCityOptions += `<optgroup label="${region}">`;
+            currentCityOptions += `<optgroup label="${region}">`;
+
+            cities.forEach(city => {
+              birthCityOptions += `<option value="${city.name}" style="color: #a171e4 !important;">${city.name}</option>`;
+              currentCityOptions += `<option value="${city.name}" style="color: #a171e4 !important;">${city.name}</option>`;
+            });
+
+            birthCityOptions += '</optgroup>';
+            currentCityOptions += '</optgroup>';
+          }
+        });
+
+        // 添加其他城市（如果有的话）
+        if (otherCities.length > 0) {
+          birthCityOptions += '<optgroup label="其他城市">';
+          currentCityOptions += '<optgroup label="其他城市">';
+
+          otherCities.forEach(city => {
+            birthCityOptions += `<option value="${city.name}" style="color: #a171e4 !important;">${city.name}</option>`;
+            currentCityOptions += `<option value="${city.name}" style="color: #a171e4 !important;">${city.name}</option>`;
+          });
+
+          birthCityOptions += '</optgroup>';
+          currentCityOptions += '</optgroup>';
+        }
+
+        birthCitySelect.innerHTML = birthCityOptions;
+        currentCitySelect.innerHTML = currentCityOptions;
+
+        // 立即设置颜色
+        setTimeout(function() {
+          const bcitySelect = document.getElementById('p-bcity');
+          const ccitySelect = document.getElementById('p-ccity');
+
+          if (bcitySelect) {
+            bcitySelect.style.color = '#a171e4';
+            Array.from(bcitySelect.options).forEach(opt => {
+              opt.style.color = '#a171e4';
+            });
+          }
+
+          if (ccitySelect) {
+            ccitySelect.style.color = '#a171e4';
+            Array.from(ccitySelect.options).forEach(opt => {
+              opt.style.color = '#a171e4';
+            });
+          }
+        }, 100);
+      } catch (err) {
+        console.error('加载城市列表失败:', err);
+      }
+    }
+
+    async function loadProfiles() {
+      try {
+        const data = await api.get('/api/profile');
+        profiles = data.profiles || [];
+        renderProfileBar();
+        if (!profiles.length) {
+          renderNoProfile();
+        } else {
+          const savedId = parseInt(localStorage.getItem('current_profile_id') || '0');
+          const p = profiles.find(p => p.id === savedId)
+                  || profiles.find(p => p.is_self)
+                  || profiles[0];
+          selectProfile(p.id);
+        }
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    function renderProfileBar() {
+      const bar = document.getElementById('profile-bar');
+      if (!profiles.length) {
+        bar.innerHTML = `<button class="p-chip-add" onclick="openModal('add-profile-modal')">＋ 新建档案</button>`;
+        return;
+      }
+      bar.innerHTML = profiles.map(p => `
+        <div class="p-chip ${p.id === currentProfileId ? 'active' : ''}"
+             data-id="${p.id}" onclick="selectProfile(${p.id})">
+          ${signEmoji(p.sun_sign_cn)} ${p.name}
+          <span style="font-size:10px;opacity:.6">${p.relationship}</span>
+        </div>
+      `).join('') + `<button class="p-chip-add" onclick="openModal('add-profile-modal')">＋</button>`;
+    }
+
+    function selectProfile(id) {
+      currentProfileId = id;
+      localStorage.setItem('current_profile_id', id);
+      document.querySelectorAll('.p-chip').forEach(el =>
+        el.classList.toggle('active', parseInt(el.dataset.id) === id));
+      const p = profiles.find(p => p.id === id);
+      if (p) updateSigns(p);
+      loadFortune(id);
+    }
+
+    function updateSigns(p) {
+      document.getElementById('sun-emoji').textContent  = signEmoji(p.sun_sign_cn) || '☀️';
+      document.getElementById('moon-emoji').textContent = '🌙';
+      document.getElementById('asc-emoji').textContent  = '⬆️';
+      document.getElementById('sun-sign').textContent   = p.sun_sign_cn  || '--';
+      document.getElementById('moon-sign').textContent  = p.moon_sign_cn || '--';
+      document.getElementById('asc-sign').textContent   = p.asc_sign_cn  || '--';
+    }
+
+    // ── 运势 ──────────────────────────────────────────
+    async function loadFortune(profileId) {
+      const card = document.getElementById('fortune-card');
+      card.innerHTML = `<div style="text-align:center;padding:28px;color:var(--text-muted)">
+        <span class="spinner"></span><p style="margin-top:10px;font-size:13px">推算中...</p></div>`;
+
+      try {
+        const data = await api.get(`/api/fortune?profile_id=${profileId}`);
+        lastFortune = data;
+        renderFortuneCard(data);
+      } catch (e) {
+        card.innerHTML = `<div class="empty-state"><p>${e.message}</p>
+          <br><button class="btn-outline" onclick="loadFortune(${profileId})" style="width:auto;padding:8px 20px">重试</button></div>`;
+      }
+    }
+
+    function renderFortuneCard(data) {
+      const { scores, content, date } = data;
+      const circumference = 2 * Math.PI * 38;
+      const offset = circumference * (1 - scores.overall / 100);
+
+      const subItems = [
+        { label:'💕 爱情', key:'love' },
+        { label:'💰 财富', key:'wealth' },
+        { label:'💼 事业', key:'career' },
+        { label:'📚 学习', key:'study' },
+      ];
+
+      document.getElementById('fortune-card').innerHTML = `
+        <div class="fc-header">
+          <span style="font-size:14px;font-weight:700">今日运势</span>
+          <span class="fc-date">${date}</span>
+          ${data.cached ? '<span class="badge badge-purple" style="font-size:10px">已缓存</span>' : ''}
+        </div>
+
+        <div class="score-ring-wrap">
+          <div class="score-ring">
+            <svg viewBox="0 0 90 90">
+              <circle class="ring-bg" cx="45" cy="45" r="38"/>
+              <circle class="ring-fill" cx="45" cy="45" r="38"
+                stroke-dasharray="${circumference}"
+                stroke-dashoffset="${circumference}"
+                id="ring-fill-circle"/>
+            </svg>
+            <div class="ring-num">
+              <span class="rn-val">${scores.overall}</span>
+              <span class="rn-label">综合</span>
+            </div>
+          </div>
+
+          <div class="score-mini-grid">
+            ${subItems.map(item => `
+              <div class="smi">
+                <div class="smi-label">${item.label}</div>
+                <div class="smi-bar">
+                  <div class="smi-fill" style="width:0%;background:${scoreColor(scores[item.key])}"
+                       data-target="${scores[item.key]}"></div>
+                </div>
+                <div class="smi-val" style="color:${scoreColor(scores[item.key])}">${scores[item.key]}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:13px;color:var(--text-muted);padding-top:8px">
+          ${content.summary || '点击查看今日建议 ›'}
+        </div>
+      `;
+
+      // 动画：圆环
+      requestAnimationFrame(() => {
+        const circle = document.getElementById('ring-fill-circle');
+        if (circle) circle.style.strokeDashoffset = offset;
+        // 进度条动画
+        document.querySelectorAll('.smi-fill').forEach(el => {
+          el.style.width = el.dataset.target + '%';
+        });
+      });
+    }
+
+    // 点击运势卡跳转详情
+    function goToDetail() {
+      if (!lastFortune) return;
+      sessionStorage.setItem('fortune_data', JSON.stringify(lastFortune));
+      const p = profiles.find(p => p.id === currentProfileId);
+      if (p) sessionStorage.setItem('fortune_profile', JSON.stringify(p));
+      location.href = '/static/fortune-detail.html';
+    }
+
+    // ── 完整星盘 ──────────────────────────────────────
+    function goToChart(e) {
+      e.preventDefault();
+      if (!currentProfileId) { toast('请先选择档案', 'info'); return; }
+      location.href = '/static/star-chart.html';
+    }
+
+    // ── 新建档案 ──────────────────────────────────────
+    async function createProfile() {
+      const name = document.getElementById('p-name').value.trim();
+      const rel  = document.getElementById('p-rel').value;
+      const birth = document.getElementById('p-birth').value;
+      const bcity = document.getElementById('p-bcity').value.trim();
+      const ccity = document.getElementById('p-ccity').value.trim();
+      if (!name)  { toast('请填写姓名', 'error'); return; }
+      if (!bcity) { toast('请填写出生城市', 'error'); return; }
+      if (!ccity) { toast('请填写现居城市', 'error'); return; }
+
+      const btn = document.getElementById('btn-create');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> 计算中...';
+      try {
+        const result = await api.post('/api/profile', {
+          name, relationship: rel, is_self: rel === '本人',
+          birth_city: bcity, current_city: ccity,
+          birth_time: birth,
+          gender: document.getElementById('p-gender').value || null,
+          mbti:   document.getElementById('p-mbti').value.trim() || null,
+        });
+
+        // 检查是否有地点警告信息
+        if (result.location_warning) {
+          toast(result.location_warning, 'warning');
+        } else {
+          toast('档案创建成功！', 'success');
+        }
+
+        closeModal('add-profile-modal');
+        await loadProfiles();
+        selectProfile(result.profile.id);
+      } catch (e) { toast(e.message, 'error'); }
+      finally {
+        btn.disabled = false;
+        btn.innerHTML = '🔮 创建并计算星盘';
+      }
+    }
+
+    function renderNoProfile() {
+      document.getElementById('fortune-card').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📝</div>
+          <p>还没有档案，创建后即可查看今日运势</p>
+          <br>
+          <button class="btn-primary" onclick="openModal('add-profile-modal')"
+                  style="max-width:200px;margin:0 auto">创建档案</button>
+        </div>
+      `;
+    }
+
+    // 设置所有下拉框文字颜色
+    function setSelectColors() {
+      const allSelects = document.querySelectorAll('select');
+      allSelects.forEach(select => {
+        // 设置选择框本身的文字颜色
+        select.style.color = '#a171e4';
+
+        // 设置所有选项的文字颜色
+        Array.from(select.options).forEach(option => {
+          option.style.color = '#a171e4';
+        });
+      });
+    }
+
+    init();
+
+    // 在页面完全加载后运行颜色设置
+    window.addEventListener('load', function() {
+      setTimeout(setSelectColors, 500);
+    });
+  </script>
+</body>
+</html>

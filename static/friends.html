@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>好友列表 - 一起算算</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    .back-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 24px; position: sticky; top: 0; z-index: 100;
+      background: var(--nav-bg); backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .btn-back {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 18px; cursor: pointer; padding: 4px 8px;
+      border-radius: 8px; transition: background .15s; line-height: 1;
+    }
+    .btn-back:hover { background: rgba(124,58,237,.1); }
+    .back-title { font-size: 16px; font-weight: 700; }
+
+    .page-content {
+      padding: 16px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-action {
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--primary-500);
+      cursor: pointer;
+    }
+
+    .friends-list {
+      margin-bottom: 20px;
+    }
+    .friend-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .friend-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--gradient-purple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+      margin-right: 14px;
+    }
+    .friend-info {
+      flex: 1;
+    }
+    .friend-name {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .friend-sign {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .friend-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .friend-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(124,58,237,0.1);
+      border: 1px solid rgba(124,58,237,0.2);
+      color: #a78bfa;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .friend-btn.red {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      color: #ef4444;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    .empty-icon {
+      font-size: 36px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    .empty-text {
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+    .empty-subtext {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+    .empty-action {
+      margin-top: 16px;
+    }
+    .btn-primary {
+      padding: 10px 20px;
+      background: var(--gradient-purple);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* 确认删除模态框 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      visibility: hidden;
+      opacity: 0;
+      transition: visibility 0s linear 0.2s, opacity 0.2s;
+    }
+    .modal-overlay.visible {
+      visibility: visible;
+      opacity: 1;
+      transition-delay: 0s;
+    }
+    .modal-card {
+      width: 85%;
+      max-width: 340px;
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.2);
+      transform: translateY(20px);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.visible .modal-card {
+      transform: translateY(0);
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .modal-content {
+      margin-bottom: 24px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .modal-btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-cancel {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+    .btn-confirm {
+      background: var(--gradient-purple);
+      border: none;
+      color: white;
+    }
+    .btn-danger {
+      background: #ef4444;
+      border: none;
+      color: white;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 0;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="back-bar">
+    <button class="btn-back" onclick="history.back()">←</button>
+    <span class="back-title">我的好友</span>
+  </div>
+
+  <div class="page-content">
+    <div id="friends-container">
+      <div class="loading">
+        <span class="spinner"></span>
+        <p style="margin-top:10px;font-size:13px">加载好友列表...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 确认删除模态框 -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal-card">
+      <div class="modal-title">删除好友</div>
+      <div class="modal-content">
+        确定要删除好友 <span id="friend-name-to-delete"></span> 吗？删除后对方将不再是您的好友。
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn btn-cancel" onclick="closeModal()">取消</button>
+        <button class="modal-btn btn-danger" id="confirm-delete-btn">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/static/index.html" class="nav-item"><span class="nav-icon">🏠</span><span>首页</span></a>
+    <a href="/static/chat.html" class="nav-item"><span class="nav-icon">🤖</span><span>AI问答</span></a>
+    <a href="/static/community.html" class="nav-item active"><span class="nav-icon">💫</span><span>社区</span></a>
+    <a href="/static/me.html" class="nav-item"><span class="nav-icon">👤</span><span>我的</span></a>
+  </nav>
+
+  <script src="/static/common.js"></script>
+  <script>
+    let friendsList = [];
+    let friendIdToDelete = null;
+
+    async function init() {
+      if (!Auth.requireLogin()) return;
+
+      await loadFriends();
+    }
+
+    async function loadFriends() {
+      try {
+        const response = await api.get('/api/friends');
+        friendsList = response.friends || [];
+        renderFriends();
+      } catch (err) {
+        document.getElementById('friends-container').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-text">加载失败</div>
+            <div class="empty-subtext">${err.message}</div>
+            <div class="empty-action">
+              <button class="btn-primary" onclick="loadMockFriends()">使用模拟数据</button>
+              <button class="btn-primary" onclick="loadFriends()">重试</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // 加载模拟好友数据
+    function loadMockFriends() {
+      friendsList = [
+        {
+          id: 101,
+          name: "星语星愿",
+          sun_sign_cn: "天蝎座",
+          email: "star@example.com"
+        },
+        {
+          id: 102,
+          name: "占星小达人",
+          sun_sign_cn: "双子座",
+          email: "astro@example.com"
+        },
+        {
+          id: 103,
+          name: "星座研究员",
+          sun_sign_cn: "水瓶座",
+          email: "zodiac@example.com"
+        }
+      ];
+      renderFriends();
+      toast('已加载模拟数据', 'info');
+    }
+
+    function renderFriends() {
+      const container = document.getElementById('friends-container');
+
+      if (friendsList.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <div class="empty-text">暂无好友</div>
+            <div class="empty-subtext">快去添加好友，结交更多星友吧</div>
+            <div class="empty-action">
+              <button class="btn-primary" onclick="goToCommunity()">查找朋友</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const html = `
+        <div class="section-title">
+          <span>好友列表 (${friendsList.length})</span>
+          <span class="section-action" onclick="goToCommunity()">添加好友</span>
+        </div>
+        <div class="friends-list">
+          ${friendsList.map(friend => `
+            <div class="friend-item" onclick="viewProfile(${friend.id})">
+              <div class="friend-avatar">${friend.name.charAt(0)}</div>
+              <div class="friend-info">
+                <div class="friend-name">${friend.name}</div>
+                <div class="friend-sign">${friend.sun_sign_cn || '未知星座'}</div>
+              </div>
+              <div class="friend-actions">
+                <div class="friend-btn" onclick="event.stopPropagation(); startChat(${friend.id})">💬</div>
+                <div class="friend-btn red" onclick="event.stopPropagation(); showDeleteConfirm(${friend.id}, '${friend.name}')">✕</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function viewProfile(userId) {
+      window.location.href = `/static/profile.html?id=${userId}`;
+    }
+
+    function goToCommunity() {
+      window.location.href = '/static/community.html';
+    }
+
+    async function startChat(userId) {
+      try {
+        const result = await api.post('/api/chats', { target_user_id: userId });
+        window.location.href = `/static/messages.html?room=${result.room_id}`;
+      } catch (err) {
+        toast(`聊天创建失败: ${err.message}，将使用模拟功能`, 'warning');
+        // 模拟跳转
+        setTimeout(() => {
+          window.location.href = `/static/messages.html?room=mock_${userId}`;
+        }, 1000);
+      }
+    }
+
+    function showDeleteConfirm(userId, name) {
+      friendIdToDelete = userId;
+      document.getElementById('friend-name-to-delete').textContent = name;
+      document.getElementById('confirm-modal').classList.add('visible');
+
+      document.getElementById('confirm-delete-btn').onclick = () => {
+        deleteFriend(userId);
+      };
+    }
+
+    function closeModal() {
+      document.getElementById('confirm-modal').classList.remove('visible');
+      friendIdToDelete = null;
+    }
+
+    async function deleteFriend(userId) {
+      try {
+        await api.delete(`/api/friends/${userId}`);
+        toast('好友已删除', 'success');
+
+        // 更新本地列表
+        friendsList = friendsList.filter(f => f.id !== userId);
+        renderFriends();
+
+        closeModal();
+      } catch (err) {
+        toast(`删除失败: ${err.message}，将使用模拟功能`, 'warning');
+
+        // 模拟删除
+        friendsList = friendsList.filter(f => f.id !== userId);
+        renderFriends();
+        closeModal();
+      }
+    }
+
+    // 时间格式化
+    function formatTime(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diff = (now - date) / 1000; // 差值（秒）
+
+      if (diff < 60) return '刚刚';
+      if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+
+      // 同一年显示月-日
+      if (date.getFullYear() === now.getFullYear()) {
+        return `${date.getMonth() + 1}-${date.getDate()}`;
+      }
+
+      // 不同年显示年-月-日
+      return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+    }
+
+    init();
+  </script>
+</body>
+</html>

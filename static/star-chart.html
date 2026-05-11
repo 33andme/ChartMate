@@ -1,0 +1,613 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的星盘 - 一起算算</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    .back-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 24px; position: sticky; top: 0; z-index: 100;
+      background: var(--nav-bg); backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .btn-back {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 18px; cursor: pointer; padding: 4px 8px;
+      border-radius: 8px; transition: background .15s; line-height: 1;
+    }
+    .btn-back:hover { background: rgba(124,58,237,.1); }
+    .back-title { font-size: 16px; font-weight: 700; }
+    .back-sub   { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+    .chart-wrap {
+      display: flex; justify-content: center; align-items: center;
+      padding: 20px 16px 8px;
+    }
+    #birth-chart {
+      width: 100%; max-width: 420px; height: auto;
+      filter: drop-shadow(0 0 28px rgba(80,40,180,.35));
+    }
+
+    .planet-table {
+      margin: 0 16px 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+    }
+    .pt-header {
+      display: grid; grid-template-columns: 2fr 3fr 2fr 2fr;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 11px; font-weight: 700;
+      color: var(--text-muted); letter-spacing: .8px;
+    }
+    .pt-row {
+      display: grid; grid-template-columns: 2fr 3fr 2fr 2fr;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 13px; align-items: center;
+    }
+    .pt-row:last-child { border-bottom: none; }
+    .pt-planet { font-weight: 600; }
+    .pt-retro  { color: #f59e0b; font-size: 11px; margin-left: 4px; }
+    .pt-short  { font-size: 15px; margin-right: 6px; font-weight: 700; }
+
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .settings-item:hover { background: rgba(124,58,237,0.06); }
+    .settings-item-left { display: flex; align-items: center; gap: 12px; }
+    .settings-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .settings-label { font-size: 15px; }
+    .settings-desc { font-size: 12px; color: var(--text-muted); }
+    .settings-arrow { color: var(--text-muted); font-size: 13px; }
+
+    .aspect-legend {
+      display: flex; flex-wrap: wrap; gap: 8px 16px;
+      margin: 0 16px 16px; font-size: 12px;
+    }
+    .aspect-legend span {
+      display: flex; align-items: center; gap: 5px; color: var(--text-muted);
+    }
+    .aleg-line {
+      display: inline-block; width: 18px; height: 2px; border-radius: 2px;
+    }
+
+    .method-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.25);
+      border-radius: 50px; padding: 4px 12px; font-size: 11px;
+      color: #a78bfa; margin: 0 16px 16px;
+    }
+    .section-title { padding: 0 16px 10px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="back-bar">
+    <button class="btn-back" onclick="history.back()">←</button>
+    <span class="back-title">我的星盘</span>
+    <span class="back-sub" id="chart-sub"></span>
+  </div>
+
+  <div class="chart-wrap">
+    <svg id="birth-chart" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+      <text x="200" y="205" text-anchor="middle" font-size="13"
+            fill="rgba(139,122,168,.6)">加载中...</text>
+    </svg>
+  </div>
+
+  <div id="method-row"></div>
+
+  <div class="settings-item" onclick="location.href='/static/synastry.html'" style="margin-bottom:10px">
+    <div class="settings-item-left">
+      <div class="settings-icon" style="background:rgba(236,72,153,.1);color:#ec4899">💞</div>
+      <div>
+        <div class="settings-label">合盘分析</div>
+        <div class="settings-desc">比较两个星盘，查看相互影响</div>
+      </div>
+    </div>
+    <span class="settings-arrow">→</span>
+  </div>
+
+  <div class="settings-item" onclick="Theme.toggle()" style="margin-bottom:10px">
+    <div class="settings-item-left">
+      <div class="settings-icon" style="background:rgba(139,92,246,.1);color:#8b5cf6">☀️</div>
+      <div>
+        <div class="settings-label" id="theme-desc">深色模式</div>
+        <div class="settings-desc">切换浅色/深色主题</div>
+      </div>
+    </div>
+    <span class="settings-arrow" data-theme-toggle>☀️ 切换</span>
+  </div>
+
+  <div class="section-title">相位图例</div>
+  <div class="aspect-legend" id="aspect-legend">
+    <span><i class="aleg-line" style="background:#e2e8f0"></i>合相 0°</span>
+    <span><i class="aleg-line" style="background:#22c55e"></i>六分相 60°</span>
+    <span><i class="aleg-line" style="background:#ef4444"></i>刑相 90°</span>
+    <span><i class="aleg-line" style="background:#3b82f6"></i>三分相 120°</span>
+    <span><i class="aleg-line" style="background:#f97316"></i>对分相 180°</span>
+  </div>
+
+  <div class="section-title">行星落座</div>
+  <div class="planet-table" id="planet-table">
+    <div style="text-align:center;padding:24px"><span class="spinner"></span></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/static/index.html"     class="nav-item"><span class="nav-icon">🏠</span><span>首页</span></a>
+    <a href="/static/chat.html"      class="nav-item"><span class="nav-icon">🤖</span><span>AI问答</span></a>
+    <a href="/static/messages.html"  class="nav-item"><span class="nav-icon">💌</span><span>消息</span></a>
+    <a href="/static/me.html"        class="nav-item"><span class="nav-icon">👤</span><span>我的</span></a>
+  </nav>
+
+  <script src="/static/common.js"></script>
+  <script>
+  // 主题系统初始化
+  Theme.init();
+
+  // ── 常量 ─────────────────────────────────────────────────────────────
+  const CX = 200, CY = 200;
+  const R = {
+    outer:    188,   // 最外圈
+    zodiacIn: 163,   // 黄道带内缘
+    houseNum: 144,   // 宫号文字
+    planet:   122,   // 行星标注
+    aspectIn: 108,   // 相位线终点（靠近行星）
+    inner:     64,   // 内圆
+  };
+
+  const SIGNS_ORDER = [
+    'Libra','Virgo','Leo','Cancer','Gemini','Taurus',
+    'Aries','Pisces','Aquarius','Capricorn','Sagittarius','Scorpio',
+  ];
+  // 单字缩写，参考图风格
+  const SIGN_SHORT = {
+    Aries:'白', Taurus:'金', Gemini:'双', Cancer:'巨',
+    Leo:'狮',   Virgo:'处',  Libra:'天',  Scorpio:'蝎',
+    Sagittarius:'射', Capricorn:'摩', Aquarius:'水', Pisces:'双',
+  };
+  const SIGN_CN_MAP = {
+    Aries:'白羊', Taurus:'金牛', Gemini:'双子', Cancer:'巨蟹',
+    Leo:'狮子',   Virgo:'处女',  Libra:'天秤',  Scorpio:'天蝎',
+    Sagittarius:'射手', Capricorn:'摩羯', Aquarius:'水瓶', Pisces:'双鱼',
+  };
+  // 行星中文缩写
+  const PLANET_SHORT = {
+    Sun:'日', Moon:'月', Mercury:'水', Venus:'金', Mars:'火',
+    Jupiter:'木', Saturn:'土', Uranus:'天', Neptune:'海', Pluto:'冥',
+    Mean_Node:'北', Asc:'升', MC:'顶',
+  };
+  const PLANET_CN = {
+    Sun:'太阳', Moon:'月亮', Mercury:'水星', Venus:'金星', Mars:'火星',
+    Jupiter:'木星', Saturn:'土星', Uranus:'天王星', Neptune:'海王星', Pluto:'冥王星',
+    Mean_Node:'北交点', Asc:'上升', MC:'天顶',
+  };
+  // 行星颜色（参考图风格）
+  const PLANET_COLOR = {
+    Sun:'#fbbf24', Moon:'#e2e8f0', Mercury:'#a78bfa', Venus:'#f9a8d4',
+    Mars:'#f87171', Jupiter:'#fb923c', Saturn:'#fde68a', Uranus:'#67e8f9',
+    Neptune:'#818cf8', Pluto:'#c084fc', Mean_Node:'#6ee7b7', Asc:'#f97316',
+  };
+
+  // 新顺序 - 顺时针从12点开始（天秤座在正上方）
+  const SIGN_BASE_LON = {
+    Libra:0, Virgo:30, Leo:60, Cancer:90, Gemini:120, Taurus:150,
+    Aries:180, Pisces:210, Aquarius:240, Capricorn:270, Sagittarius:300, Scorpio:330,
+  };
+
+  // 相位定义
+  const ASPECTS = [
+    { angle:0,   orb:8,  color:'#cbd5e1', width:0.9 },  // 合相
+    { angle:60,  orb:6,  color:'#22c55e', width:1.0 },  // 六分
+    { angle:90,  orb:8,  color:'#ef4444', width:1.1 },  // 刑
+    { angle:120, orb:8,  color:'#3b82f6', width:1.1 },  // 三分
+    { angle:180, orb:8,  color:'#f97316', width:1.1 },  // 对分
+  ];
+
+  // ── 工具函数 ──────────────────────────────────────────────────────────
+  function toRad(d) { return d * Math.PI / 180; }
+  function f(n) { return n.toFixed(2); }
+
+  function pol(r, angleDeg) {
+    const a = toRad(angleDeg);
+    return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+  }
+
+  // 黄道经度 → SVG角度（0度在12点钟位置，顺时针）
+  function lonToSVG(lon, ascLon) {
+    // 将ASC放在180°位置(9点钟)，然后转换为12点钟为0°的顺时针坐标系
+    return (90 - (lon - ascLon)) % 360;
+  }
+
+  function getPlanetLon(p) {
+    return (SIGN_BASE_LON[p.sign] || 0) + (p.degree || 0);
+  }
+
+  function svgEl(tag, attrs, text) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const el = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+
+  // 计算两行星之间的相位
+  function getAspect(lon1, lon2) {
+    const diff = Math.abs(((lon1 - lon2) % 360 + 360) % 360);
+    const angle = diff > 180 ? 360 - diff : diff;
+    for (const asp of ASPECTS) {
+      if (Math.abs(angle - asp.angle) <= asp.orb) return asp;
+    }
+    return null;
+  }
+
+  // 计算行星所在宫位（从ASC开始每30°一宫）
+  function getHouseNumber(lon, ascLon) {
+    // 从ASC开始逆时针，每30度一宫
+    const diff = (lon - ascLon + 360) % 360;
+    return Math.floor(diff / 30) + 1;
+  }
+
+  // ── 绘制星盘 ──────────────────────────────────────────────────────────
+  function drawChart(astral, profileName) {
+    const svg = document.getElementById('birth-chart');
+    svg.innerHTML = '';
+    const isLight = document.body.classList.contains('light');
+
+    const BG       = isLight ? '#f0ebff' : '#09090f';
+    const RING_BG  = isLight ? 'rgba(180,160,240,.15)' : 'rgba(255,255,255,.04)';
+    const DIV_COL  = isLight ? 'rgba(100,60,200,.3)'   : 'rgba(200,180,255,.2)';
+    const TEXT_COL = isLight ? '#3b1f8c'               : '#d8cfff';
+    const SIGN_COL = isLight ? '#7c3aed'               : '#9d8ccc';
+    const AXIS_COL = isLight ? '#a78bfa'               : '#8b6fd4';
+    const INNER_BG = isLight ? 'rgba(237,232,255,.85)' : 'rgba(12,8,32,.9)';
+
+    const planets = astral.planets || {};
+    const ascP    = planets.Asc;
+    const ascLon  = ascP ? getPlanetLon(ascP) : (SIGN_BASE_LON[astral.asc_sign] || 0);
+
+    // ── 1. 背景 ────────────────────────────────────────
+    svg.appendChild(svgEl('circle', { cx:CX, cy:CY, r:R.outer+2, fill:BG }));
+
+    // 添加十字线 - 与星座对齐，每30度一条线，从0度开始（12点位置）
+    for (let i = 0; i < 6; i++) {
+      const angle = i * 30;  // 每30度一条线
+      const [x1, y1] = pol(R.zodiacIn, angle);
+      const [x2, y2] = pol(R.zodiacIn, angle + 180);
+
+      svg.appendChild(svgEl('line', {
+        x1: f(x1), y1: f(y1),
+        x2: f(x2), y2: f(y2),
+        stroke: 'rgba(255,255,255,0.06)',
+        'stroke-width': '0.5',
+      }));
+    }
+
+    // 黄道带环背景
+    svg.appendChild(svgEl('circle', {
+      cx:CX, cy:CY, r:R.outer,
+      fill:'none',
+      stroke: DIV_COL, 'stroke-width':'0.8',
+    }));
+
+    // 外环填色（黄道带底色）
+    const defs = svgEl('defs', {});
+    svg.appendChild(defs);
+
+    // 用clip区域画黄道带底色
+    svg.appendChild(svgEl('circle', {
+      cx:CX, cy:CY, r:R.outer,
+      fill: RING_BG,
+    }));
+    // 内圆遮住黄道带底色（让zodiacIn以内恢复黑色）
+    svg.appendChild(svgEl('circle', {
+      cx:CX, cy:CY, r:R.zodiacIn,
+      fill: BG,
+    }));
+
+    // ── 2. 黄道带分割线 + 星座名 ──────────────────────
+    SIGNS_ORDER.forEach((sign, i) => {
+      const lon = i * 30;
+      const svgA = lonToSVG(lon, ascLon);
+
+      // 分割线（从外圈到黄道内缘）
+      const [ox, oy] = pol(R.outer,    svgA);
+      const [ix, iy] = pol(R.zodiacIn, svgA);
+      svg.appendChild(svgEl('line', {
+        x1:f(ox), y1:f(oy), x2:f(ix), y2:f(iy),
+        stroke: DIV_COL, 'stroke-width':'0.8',
+      }));
+
+      // 星座缩写（扇区中点）
+      const midLon = lon + 15;
+      const midA   = lonToSVG(midLon, ascLon);
+      const textR  = (R.outer + R.zodiacIn) / 2;
+      const [tx, ty] = pol(textR, midA);
+      svg.appendChild(svgEl('text', {
+        x:f(tx), y:f(ty+5),
+        'text-anchor':'middle', 'font-size':'13', 'font-weight':'600',
+        fill: SIGN_COL,
+        'font-family':'sans-serif',
+      }, SIGN_SHORT[sign]));
+    });
+
+    // 黄道带内缘圆（分隔线）
+    svg.appendChild(svgEl('circle', {
+      cx:CX, cy:CY, r:R.zodiacIn,
+      fill:'none', stroke:DIV_COL, 'stroke-width':'0.8',
+    }));
+
+    // ── 3. 宫位分割线 + 宫号 ──────────────────────────
+    // 宫位编号（1到12，顺时针从ASC开始）
+    for (let i = 0; i < 12; i++) {
+      // 宫位起点从 ASC 开始（ASC位于180°/9点钟，顺时针）
+      const houseStartLon = ascLon + i * 30;
+      const svgA = lonToSVG(houseStartLon, ascLon);
+
+      // 宫位线（从zodiacIn到inner）
+      const [oz, zy] = pol(R.zodiacIn, svgA);
+      const [ix, iy] = pol(R.inner,    svgA);
+      svg.appendChild(svgEl('line', {
+        x1:f(oz), y1:f(zy), x2:f(ix), y2:f(iy),
+        stroke: i === 0 || i === 3 || i === 6 || i === 9
+          ? AXIS_COL : DIV_COL,
+        'stroke-width': i === 0 || i === 3 || i === 6 || i === 9 ? '1.5' : '0.7',
+        'stroke-opacity': i === 0 || i === 3 || i === 6 || i === 9 ? '0.8' : '0.5',
+      }));
+
+      // 宫号（扇区中间，在houseNum半径）
+      const midA = lonToSVG(houseStartLon + 15, ascLon);
+      const [nx, ny] = pol(R.houseNum, midA);
+      svg.appendChild(svgEl('text', {
+        x:f(nx), y:f(ny+5),
+        'text-anchor':'middle', 'font-size':'11',
+        fill: isLight ? 'rgba(80,50,180,.5)' : 'rgba(200,180,255,.35)',
+        'font-family':'sans-serif',
+      }, String(i + 1)));
+    }
+
+    // ── 4. 四轴标签（ASC/DSC/MC/IC）──────────────────
+    const axisLabels = [
+      { lon: ascLon,       label: 'ASC' },
+      { lon: ascLon + 180, label: 'DSC' },
+      { lon: ascLon + 90,  label: 'IC'  },
+      { lon: ascLon + 270, label: 'MC'  },
+    ];
+    axisLabels.forEach(({ lon, label }) => {
+      const svgA = lonToSVG(lon, ascLon);
+      // 轴端小标签（在外圈外侧）
+      const [lx, ly] = pol(R.outer + 14, svgA);
+      svg.appendChild(svgEl('text', {
+        x:f(lx), y:f(ly+4),
+        'text-anchor':'middle', 'font-size':'9', 'font-weight':'700',
+        fill: AXIS_COL, 'fill-opacity':'0.85', 'font-family':'sans-serif',
+      }, label));
+    });
+
+    // ── 5. 收集行星位置（用于相位线）─────────────────
+    const SHOW_PLANETS = ['Sun','Moon','Mercury','Venus','Mars',
+                          'Jupiter','Saturn','Uranus','Neptune','Pluto','Mean_Node'];
+    const planetData = [];
+    SHOW_PLANETS.forEach(pid => {
+      const p = planets[pid];
+      if (!p) return;
+      const lon   = getPlanetLon(p);
+      const svgA  = lonToSVG(lon, ascLon);
+      const color = PLANET_COLOR[pid] || '#a78bfa';
+      // 计算行星宫位
+      const house = getHouseNumber(lon, ascLon);
+      planetData.push({ pid, p, lon, svgA, color, house });
+    });
+
+    // ── 6. 相位线（在行星圆点之间，穿过中心区域）──────
+    const aspectLayer = svgEl('g', { opacity:'0.7' });
+    // 所有行星都画线，包括无相位的
+    for (let i = 0; i < planetData.length; i++) {
+      for (let j = i + 1; j < planetData.length; j++) {
+        const a   = planetData[i];
+        const b   = planetData[j];
+        const asp = getAspect(a.lon, b.lon);
+
+        // 相位线从行星在 aspectIn 半径处穿过中心连到对方
+        let x1, y1, x2, y2;
+
+        // 无论有没有相位，都画中心连线（无相位的用很淡的灰线）
+        if (Math.abs(a.svgA - b.svgA) > 150) {
+          // 对角线行星，相位线穿过中心点
+          [x1, y1] = pol(0, a.svgA);
+          [x2, y2] = pol(0, b.svgA);
+        } else {
+          // 附近行星，相位线从aspectIn位置连接
+          [x1, y1] = pol(R.aspectIn, a.svgA);
+          [x2, y2] = pol(R.aspectIn, b.svgA);
+        }
+
+        aspectLayer.appendChild(svgEl('line', {
+          x1:f(x1), y1:f(y1), x2:f(x2), y2:f(y2),
+          stroke: asp ? asp.color : 'rgba(255,255,255,0.03)',
+          'stroke-width': asp ? String(asp.width) : '0.5',
+          'stroke-opacity': asp ? '0.65' : '0.3',
+        }));
+      }
+    }
+    svg.appendChild(aspectLayer);
+
+    // ── 7. 行星标注 ───────────────────────────────────
+    // 避免标注重叠（调整标注位置，但相位线用真实位置）
+    const placed = [];
+    function avoidOverlap(svgA) {
+      const MIN = 13;
+      let adj = svgA;
+      let changed = true;
+      let iter = 0;
+      while (changed && iter < 20) {
+        changed = false; iter++;
+        for (const a of placed) {
+          const d = ((adj - a + 360) % 360);
+          if (d < MIN) { adj = a + MIN; changed = true; }
+          else if (d > 360 - MIN) { adj = a - MIN; changed = true; }
+        }
+      }
+      placed.push(adj);
+      return adj;
+    }
+
+    planetData.forEach(({ pid, p, lon, svgA, color }) => {
+      const labelA = avoidOverlap(svgA);
+
+      // 真实位置圆点
+      const [rx, ry] = pol(R.aspectIn + 2, svgA);
+      svg.appendChild(svgEl('circle', {
+        cx:f(rx), cy:f(ry), r:'3.5',
+        fill: color, 'fill-opacity':'0.9',
+      }));
+
+      // 连线（真实 → 标注）- 始终显示连线，即使位置没变
+      const [px, py] = pol(R.planet, labelA);
+      svg.appendChild(svgEl('line', {
+        x1:f(rx), y1:f(ry), x2:f(px), y2:f(py),
+        stroke: color, 'stroke-width':'0.6', 'stroke-opacity':'0.4',
+      }));
+
+      // 行星缩写文字
+      const [lx, ly] = pol(R.planet, labelA);
+      svg.appendChild(svgEl('text', {
+        x:f(lx), y:f(ly+5),
+        'text-anchor':'middle', 'font-size':'13', 'font-weight':'700',
+        fill: color, 'font-family':'sans-serif',
+      }, PLANET_SHORT[pid] || pid));
+
+      // 逆行标记
+      if (p.retrograde) {
+        svg.appendChild(svgEl('text', {
+          x:f(lx+9), y:f(ly-4),
+          'font-size':'8', fill:'#f59e0b', 'font-family':'sans-serif',
+        }, 'R'));
+      }
+    });
+
+    // ASC 特殊标记（橙色菱形）- ASC固定在9点钟位置(180°)
+    const [ascX, ascY] = pol(R.zodiacIn - 5, 180);
+    svg.appendChild(svgEl('polygon', {
+      points: `${f(ascX)},${f(ascY-5)} ${f(ascX+4)},${f(ascY)} ${f(ascX)},${f(ascY+5)} ${f(ascX-4)},${f(ascY)}`,
+      fill:'#f97316', 'fill-opacity':'0.9',
+    }));
+  }
+
+  // ── 行星列表 ──────────────────────────────────────────────────────────
+  function renderTable(planets) {
+    const ORDER = ['Sun','Moon','Mercury','Venus','Mars','Jupiter',
+                   'Saturn','Uranus','Neptune','Pluto','Mean_Node','Asc','MC'];
+    const table = document.getElementById('planet-table');
+    const ascP  = planets.Asc;
+    const ascLon = ascP ? getPlanetLon(ascP) : 0;
+
+    table.innerHTML = `
+      <div class="pt-header"><span>行星</span><span>星座</span><span>度数</span><span>宫位</span></div>
+      ${ORDER.filter(pid => planets[pid]).map(pid => {
+        const p = planets[pid];
+        const color = PLANET_COLOR[pid] || '#a78bfa';
+        const lon = getPlanetLon(p);
+        const house = getHouseNumber(lon, ascLon);
+
+        return `
+          <div class="pt-row">
+            <span class="pt-planet">
+              <span class="pt-short" style="color:${color}">${PLANET_SHORT[pid]||''}</span>
+              ${PLANET_CN[pid]||pid}
+            </span>
+            <span>${SIGN_CN_MAP[p.sign]||p.sign||''}</span>
+            <span style="color:var(--text-muted);font-size:12px">
+              ${p.degree}°${p.retrograde?'<span class="pt-retro">R</span>':''}
+            </span>
+            <span style="color:var(--text-muted);">第${house}宫</span>
+          </div>`;
+      }).join('')}
+    `;
+  }
+
+  // ── 全局数据存储 ────────────────────────────────────────────────────────
+  let globalAstral = null;
+  let globalName = null;
+
+  // ── 初始化 ────────────────────────────────────────────────────────────
+  async function init() {
+    if (!Auth.requireLogin()) return;
+    const profileId = parseInt(localStorage.getItem('current_profile_id'));
+    if (!profileId) { history.back(); return; }
+
+    try {
+      const data   = await api.get(`/api/profile/${profileId}`);
+      const astral = data.astral_config;
+      const name   = data.profile.name;
+
+      // 存储全局数据用于主题切换时重绘
+      globalAstral = astral;
+      globalName = name;
+
+      document.getElementById('chart-sub').textContent =
+        `${astral.sun_sign_cn}・${astral.moon_sign_cn}・${astral.asc_sign_cn}`;
+
+      document.getElementById('method-row').innerHTML = `
+        <div class="method-badge">
+          🔭 ${astral.method === 'flatlib' ? 'Swiss Ephemeris 精确计算' : '天文历精确计算'}
+        </div>`;
+
+      drawChart(astral, name);
+      renderTable(astral.planets || {});
+
+      // 更新主题切换按钮文字
+      updateThemeDesc();
+
+      // 监听主题切换事件，重新绘制星盘
+      document.addEventListener('themeChanged', () => {
+        setTimeout(() => {
+          drawChart(globalAstral, globalName);
+          updateThemeDesc();
+        }, 50); // 等待CSS变量更新完成
+      });
+
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  function updateThemeDesc() {
+    const desc = document.getElementById('theme-desc');
+    const arrow = document.querySelector('[data-theme-toggle]');
+    if (desc && arrow) {
+      if (Theme.current === 'dark') {
+        desc.textContent = '深色模式';
+        arrow.textContent = '☀️ 浅色模式';
+      } else {
+        desc.textContent = '浅色模式';
+        arrow.textContent = '🌙 深色模式';
+      }
+    }
+  }
+
+  init();
+  </script>
+</body>
+</html>

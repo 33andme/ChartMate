@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>星座社区 - 占星APP</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    /* ── 发布按钮 ── */
+    .fab {
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      width: 54px; height: 54px;
+      background: var(--gradient-purple);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.5);
+      z-index: 150;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+    .fab:active { transform: scale(0.93); }
+
+    /* ── 帖子卡片 ── */
+    .post-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .post-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .post-avatar {
+      width: 38px; height: 38px;
+      background: var(--gradient-purple);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .post-author { font-size: 13px; font-weight: 600; }
+    .post-time { font-size: 11px; color: var(--text-muted); }
+
+    .post-content {
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .post-images {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .post-images img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      cursor: pointer;
+    }
+    .post-images.one-image { grid-template-columns: 1fr; }
+    .post-images.one-image img { max-height: 250px; aspect-ratio: unset; }
+
+    .post-actions {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: color 0.2s;
+      padding: 4px 0;
+    }
+    .action-btn.liked { color: #ec4899; }
+    .action-btn .action-icon { font-size: 16px; }
+
+    /* ── 评论区 ── */
+    .comments-section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .comment-item {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .comment-author { font-weight: 600; color: var(--accent-purple); margin-right: 4px; }
+    .comment-text { color: var(--text-primary); line-height: 1.5; }
+
+    .comment-input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .comment-input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 7px 14px;
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+    }
+    .comment-input:focus { border-color: var(--accent-purple); }
+    .btn-comment-send {
+      background: var(--accent-purple);
+      border: none;
+      border-radius: 50%;
+      width: 34px; height: 34px;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* ── 发布弹窗 ── */
+    .compose-textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 14px;
+      color: var(--text-primary);
+      font-size: 15px;
+      outline: none;
+      resize: none;
+      min-height: 120px;
+      font-family: inherit;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+    .compose-textarea:focus { border-color: var(--accent-purple); }
+    .char-count { text-align: right; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+
+    /* ── 加载更多 ── */
+    .load-more-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 14px;
+      color: var(--text-muted);
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+    .load-more-btn:hover { border-color: var(--accent-purple); color: #a78bfa; }
+
+    /* ── 聊天室列表样式 ── */
+    .chat-rooms-list {
+      margin-top: 10px;
+    }
+    .chat-room-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .chat-room-avatar {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: var(--gradient-purple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .chat-room-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .chat-room-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .chat-room-last-msg {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-room-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      align-self: flex-start;
+    }
+    .chat-room-item:hover {
+      background: rgba(255,255,255,0.03);
+    }
+
+    /* ── 顶部标签切换 ── */
+    .main-tabs {
+      display: flex;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .main-tab {
+      flex: 1;
+      text-align: center;
+      padding: 12px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+    }
+    .main-tab.active {
+      color: var(--accent-purple);
+    }
+    .main-tab.active:after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 25%;
+      right: 25%;
+      height: 3px;
+      background: var(--accent-purple);
+      border-radius: 3px 3px 0 0;
+    }
+
+    /* ── 聊天室列表样式 ── */
+    .chat-rooms-list {
+      margin-top: 10px;
+    }
+    .chat-room-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .chat-room-avatar {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: var(--gradient-purple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .chat-room-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .chat-room-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .chat-room-last-msg {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-room-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      align-self: flex-start;
+    }
+    .chat-room-item:hover {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-tabs::-webkit-scrollbar { display: none; }
+    .filter-tab {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: 50px;
+      padding: 6px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-tab.active {
+      background: rgba(124,58,237,0.15);
+      border-color: var(--accent-purple);
+      color: #a78bfa;
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部 -->
+  <div class="top-bar">
+    <h1>💫 星座社区</h1>
+  </div>
+
+  <!-- 顶部Tab切换 -->
+  <div class="main-tabs">
+    <div class="main-tab active" onclick="switchTab('discover')">发现</div>
+    <div class="main-tab" onclick="switchTab('messages')">聊天</div>
+  </div>
+
+  <!-- 发现模块（默认显示） -->
+  <div id="discover-section">
+    <!-- 筛选 -->
+    <div class="filter-tabs">
+      <div class="filter-tab active" onclick="filterTab(this, 'all')">🌟 全部</div>
+      <div class="filter-tab" onclick="filterTab(this, '白羊座')">♈ 白羊</div>
+      <div class="filter-tab" onclick="filterTab(this, '金牛座')">♉ 金牛</div>
+      <div class="filter-tab" onclick="filterTab(this, '双子座')">♊ 双子</div>
+      <div class="filter-tab" onclick="filterTab(this, '巨蟹座')">♋ 巨蟹</div>
+      <div class="filter-tab" onclick="filterTab(this, '狮子座')">♌ 狮子</div>
+      <div class="filter-tab" onclick="filterTab(this, '处女座')">♍ 处女</div>
+    </div>
+
+    <!-- 帖子列表 -->
+    <div class="page-content" style="padding-top:8px">
+      <div id="post-list">
+        <div style="text-align:center;padding:40px 0;color:var(--text-muted)">
+          <span class="spinner"></span>
+          <p style="margin-top:10px;font-size:13px">加载社区动态...</p>
+        </div>
+      </div>
+      <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMorePosts()">
+        <span>加载更多</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 聊天模块（默认隐藏） -->
+  <div id="messages-section" style="display:none">
+    <div class="page-content">
+      <div class="section-title">我的聊天</div>
+      <div id="chat-rooms" class="chat-rooms-list">
+        <div style="text-align:center;padding:40px 0;color:var(--text-muted)">
+          <span class="spinner"></span>
+          <p style="margin-top:10px;font-size:13px">加载聊天列表...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- 发布 FAB -->
+  <button class="fab" onclick="openModal('compose-modal')">✏️</button>
+
+  <!-- 底部导航 -->
+  <nav class="bottom-nav">
+    <a href="/static/index.html" class="nav-item">
+      <span class="nav-icon">🏠</span><span>首页</span>
+    </a>
+    <a href="/static/chat.html" class="nav-item">
+      <span class="nav-icon">🤖</span><span>AI问答</span>
+    </a>
+    <a href="/static/community.html" class="nav-item active">
+      <span class="nav-icon">💫</span><span>社区</span>
+    </a>
+    <a href="/static/me.html" class="nav-item">
+      <span class="nav-icon">👤</span><span>我的</span>
+    </a>
+  </nav>
+
+  <!-- 发布帖子模态 -->
+  <div class="modal-overlay" id="compose-modal" onclick="handleBg(event,'compose-modal')">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title">✨ 分享星座感悟</div>
+
+      <textarea class="compose-textarea" id="compose-text"
+        placeholder="分享今日星象感悟、星座问题、运势体验..."
+        maxlength="500" oninput="updateCharCount()"></textarea>
+      <div class="char-count"><span id="char-count">0</span>/500</div>
+
+      <button class="btn-primary" id="btn-publish" onclick="publishPost()">
+        🚀 发布
+      </button>
+    </div>
+  </div>
+
+  <!-- 评论模态 -->
+  <div class="modal-overlay" id="comment-modal" onclick="handleBg(event,'comment-modal')">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:75vh">
+      <div class="modal-handle"></div>
+      <div class="modal-title">💬 评论</div>
+      <div id="comment-list" style="max-height:45vh;overflow-y:auto;margin-bottom:12px"></div>
+      <div class="comment-input-row">
+        <input class="comment-input" id="comment-input-field" placeholder="说点什么..." maxlength="200">
+        <button class="btn-comment-send" onclick="submitComment()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script>
+    // ── 主变量 ────────────────────────────────────────────────────────────
+    let currentTab = 'discover';
+    let page = 1;
+    let hasMore = true;
+    let currentFilter = 'all';
+    let currentCommentPostId = null;
+    let chatRooms = [];
+
+    // ── 初始化 ────────────────────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (!Auth.requireLogin()) return;
+      loadPosts();
+    });
+
+    // ── Tab切换 ───────────────────────────────────────────────────────────
+    function switchTab(tab) {
+      if (tab === currentTab) return;
+      currentTab = tab;
+
+      // 更新Tab状态
+      document.querySelectorAll('.main-tab').forEach(el => {
+        el.classList.toggle('active', el.innerText.toLowerCase().includes(tab));
+      });
+
+      // 显示/隐藏对应内容
+      document.getElementById('discover-section').style.display = tab === 'discover' ? 'block' : 'none';
+      document.getElementById('messages-section').style.display = tab === 'messages' ? 'block' : 'none';
+
+      // 加载数据
+      if (tab === 'discover') {
+        if (document.getElementById('post-list').children.length <= 1) {
+          loadPosts();
+        }
+      } else if (tab === 'messages') {
+        loadChatRooms();
+      }
+    }
+
+    // ── 加载聊天室列表 ──────────────────────────────────────────────────────
+    async function loadChatRooms() {
+      try {
+        const data = await api.get('/api/chats');
+        chatRooms = data.chat_rooms || [];
+        renderChatRooms();
+      } catch (err) {
+        document.getElementById('chat-rooms').innerHTML = `
+          <div style="text-align:center;padding:20px;color:var(--text-muted)">
+            <p>加载失败：${err.message}</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
+              <button class="btn-primary" onclick="loadChatRooms()">重试</button>
+              <button class="btn-outline" onclick="loadMockChatRooms()">使用模拟数据</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // 加载模拟聊天室数据
+    function loadMockChatRooms() {
+      chatRooms = [
+        {
+          id: 1,
+          target_user: { id: 101, name: "星语星愿" },
+          last_message: "你好，能帮我看看我的星盘吗？",
+          updated_at: new Date(Date.now() - 3600000).toISOString(),
+          unread_count: 2
+        },
+        {
+          id: 2,
+          target_user: { id: 102, name: "占星小达人" },
+          last_message: "谢谢你的解析，非常准确！",
+          updated_at: new Date(Date.now() - 7200000).toISOString(),
+          unread_count: 0
+        },
+        {
+          id: 3,
+          target_user: { id: 103, name: "星座研究员" },
+          last_message: "我是天蝎座的，我们来交流一下吧",
+          updated_at: new Date(Date.now() - 86400000).toISOString(),
+          unread_count: 0
+        }
+      ];
+      renderChatRooms();
+      toast('已加载模拟聊天室数据', 'info');
+    }
+
+    // 渲染聊天室列表
+    function renderChatRooms() {
+      const container = document.getElementById('chat-rooms');
+
+      if (!chatRooms || chatRooms.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:20px;color:var(--text-muted)">
+            <p>暂无聊天</p>
+            <p style="font-size:12px;margin-top:8px">在"发现"标签中找朋友聊天吧</p>
+          </div>
+        `;
+        return;
+      }
+
+      const html = chatRooms.map(room => {
+        // 适配API返回的不同结构
+        const roomId = room.id || room.room_id;
+        const otherUser = room.target_user || room.other_user;
+        const userName = otherUser?.name || otherUser?.email?.split('@')[0] || '用户';
+        const lastMessage = room.last_message?.content || room.last_message || '';
+        const time = room.updated_at || new Date().toISOString();
+
+        return `
+          <div class="chat-room-item" onclick="goToChat('${roomId}')">
+            <div class="chat-room-avatar">${userName.charAt(0).toUpperCase()}</div>
+            <div class="chat-room-info">
+              <div class="chat-room-name">${userName}</div>
+              <div class="chat-room-last-msg">${lastMessage}</div>
+            </div>
+            <div class="chat-room-time">${timeAgo(time)}</div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    function goToChat(roomId) {
+      // 确保roomId是有效的
+      if (roomId) {
+        window.location.href = `/static/messages.html?room=${roomId}`;
+      } else {
+        toast('聊天室ID无效', 'error');
+      }
+    }
+
+    function viewProfile(userId) {
+      window.location.href = `/static/profile.html?id=${userId}`;
+    }
+
+    function handleBg(e, id) {
+      if (e.target === e.currentTarget) closeModal(id);
+    }
+
+    function filterTab(el, filter) {
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      currentFilter = filter;
+      page = 1;
+      hasMore = true;
+      document.getElementById('post-list').innerHTML = '';
+      loadPosts();
+    }
+
+    async function loadPosts(append = false) {
+      if (!hasMore) return;
+
+      // 显示加载状态
+      if (!append) {
+        document.getElementById('post-list').innerHTML = `
+          <div style="text-align:center;padding:40px 0;color:var(--text-muted)">
+            <span class="spinner"></span>
+            <p style="margin-top:10px;font-size:13px">加载社区动态...</p>
+          </div>
+        `;
+      }
+
+      try {
+        // 尝试从API获取数据
+        const data = await api.get(`/api/posts?page=${page}&page_size=10`);
+        let posts = data.posts || [];
+
+        // 处理获取到的数据
+        if (!append) {
+          document.getElementById('post-list').innerHTML = '';
+        }
+
+        if (posts.length === 0 && page === 1) {
+          // 如果没有帖子数据，显示提示信息
+          document.getElementById('post-list').innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">💬</div>
+              <p>还没有帖子，来发第一条吧！</p>
+            </div>
+          `;
+          return;
+        }
+
+        // 渲染帖子
+        posts.forEach(post => renderPost(post));
+
+        // 更新"加载更多"按钮状态
+        hasMore = posts.length === 10;
+        document.getElementById('load-more-btn').style.display = hasMore ? 'flex' : 'none';
+      } catch (err) {
+        console.error('加载帖子失败：', err);
+
+        // 当API请求失败时，使用模拟数据
+        if (!append) {
+          // 询问用户是否使用模拟数据
+          document.getElementById('post-list').innerHTML = `
+            <div style="text-align:center;padding:40px 0;color:var(--text-muted)">
+              <p>加载失败：${err.message || '服务器错误'}</p>
+              <p style="margin:10px 0">API接口可能尚未实现</p>
+              <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
+                <button class="btn-primary" onclick="loadPosts()">重试</button>
+                <button class="btn-outline" onclick="loadMockPosts()">使用模拟数据</button>
+              </div>
+            </div>
+          `;
+        } else {
+          toast(err.message || '加载更多失败', 'error');
+        }
+        document.getElementById('load-more-btn').style.display = 'none';
+      }
+    }
+
+    // 加载模拟数据
+    function loadMockPosts() {
+      const mockPosts = [
+        {
+          id: 1,
+          content: "今天的月亮在水瓶座，大家注意情绪波动，适合创新思考和团队合作！✨🌙",
+          author: { id: 101, name: "星语星愿", email: "star@example.com" },
+          created_at: new Date(Date.now() - 3600000).toISOString(),
+          like_count: 24,
+          comment_count: 5,
+          is_liked: false
+        },
+        {
+          id: 2,
+          content: "分享一下我最近的星盘解读心得：太阳落在第10宫，对事业和社会形象特别在意。木星落在第2宫，财运不错但要注意过度消费。想了解更多的朋友可以私信我！",
+          author: { id: 102, name: "占星小达人", email: "astro@example.com" },
+          created_at: new Date(Date.now() - 7200000).toISOString(),
+          like_count: 18,
+          comment_count: 3,
+          is_liked: true
+        },
+        {
+          id: 3,
+          content: "双子座的朋友们，本月水星逆行会对你们的沟通造成一些障碍，建议重要合同和谈判推迟到下个月再进行。",
+          author: { id: 103, name: "星座研究员", email: "gemini@example.com" },
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          like_count: 32,
+          comment_count: 8,
+          is_liked: false
+        }
+      ];
+
+      document.getElementById('post-list').innerHTML = '';
+      mockPosts.forEach(post => renderPost(post));
+      document.getElementById('load-more-btn').style.display = 'none';
+      toast('已加载模拟数据', 'info');
+    }
+
+    function renderPost(post) {
+      const list = document.getElementById('post-list');
+      const emailAbbr = post.author.email || '用户';
+      const avatarEmoji = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'][post.id % 12];
+
+      const imagesHtml = post.images && post.images.length > 0 ? `
+        <div class="post-images ${post.images.length === 1 ? 'one-image' : ''}">
+          ${post.images.slice(0, 9).map(url => `<img src="${url}" alt="图片" loading="lazy" onclick="previewImage('${url}')">`).join('')}
+        </div>
+      ` : '';
+
+      const el = document.createElement('div');
+      el.className = 'post-card';
+      el.dataset.postId = post.id;
+      el.innerHTML = `
+        <div class="post-header">
+          <div class="post-avatar" onclick="viewProfile(${post.author.id})">${avatarEmoji}</div>
+          <div style="flex:1">
+            <div class="post-author" onclick="viewProfile(${post.author.id})">${emailAbbr}</div>
+            <div class="post-time">${timeAgo(post.created_at)}</div>
+          </div>
+        </div>
+        <div class="post-content">${post.content.replace(/\n/g, '<br>')}</div>
+        ${imagesHtml}
+        <div class="post-actions">
+          <button class="action-btn ${post.is_liked ? 'liked' : ''}" id="like-btn-${post.id}" onclick="toggleLike(${post.id})">
+            <span class="action-icon">${post.is_liked ? '❤️' : '🤍'}</span>
+            <span id="like-count-${post.id}">${post.like_count}</span>
+          </button>
+          <button class="action-btn" onclick="openComments(${post.id})">
+            <span class="action-icon">💬</span>
+            <span>${post.comment_count}</span>
+          </button>
+          <button class="action-btn" onclick="sharePost(${post.id})">
+            <span class="action-icon">📤</span>
+          </button>
+        </div>
+      `;
+      list.appendChild(el);
+    }
+
+    async function toggleLike(postId) {
+      if (!Auth.getToken()) { toast('请先登录', 'info'); return; }
+
+      const btn = document.getElementById(`like-btn-${postId}`);
+      const countEl = document.getElementById(`like-count-${postId}`);
+      const wasLiked = btn.classList.contains('liked');
+
+      // 乐观更新
+      btn.classList.toggle('liked');
+      btn.querySelector('.action-icon').textContent = wasLiked ? '🤍' : '❤️';
+      const newCount = parseInt(countEl.textContent) + (wasLiked ? -1 : 1);
+      countEl.textContent = newCount;
+
+      try {
+        await api.post('/api/posts/like', { post_id: postId });
+        // 成功请求，不需要额外操作
+      } catch (err) {
+        console.log('点赞请求失败，但继续使用模拟效果：', err.message);
+        // 不回滚界面，继续使用模拟效果
+        toast('已使用模拟点赞功能', 'info');
+      }
+    }
+
+    async function openComments(postId) {
+      currentCommentPostId = postId;
+      openModal('comment-modal');
+      document.getElementById('comment-list').innerHTML = '<div style="text-align:center;padding:20px"><span class="spinner"></span></div>';
+
+      try {
+        const data = await api.get(`/api/posts/${postId}/comments`);
+        const list = document.getElementById('comment-list');
+        if (data.comments.length === 0) {
+          list.innerHTML = '<div class="empty-state" style="padding:20px 0"><p>还没有评论，来第一个！</p></div>';
+          return;
+        }
+        list.innerHTML = data.comments.map(c => `
+          <div class="comment-item">
+            <span class="comment-author">${c.author.email}</span>
+            <span class="comment-text">${c.content}</span>
+          </div>
+        `).join('');
+      } catch (err) {
+        document.getElementById('comment-list').innerHTML = `
+          <div style="text-align:center;padding:20px;color:var(--text-muted)">
+            <p>加载评论失败：${err.message}</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
+              <button class="btn-primary" onclick="openComments(${postId})">重试</button>
+              <button class="btn-outline" onclick="loadMockComments(${postId})">使用模拟数据</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // 加载模拟评论数据
+    function loadMockComments(postId) {
+      const mockComments = [
+        {
+          id: 101,
+          author: { id: 201, email: "user1@example.com" },
+          content: "这个分析很准确，感谢分享！",
+          created_at: new Date(Date.now() - 3600000).toISOString()
+        },
+        {
+          id: 102,
+          author: { id: 202, email: "user2@example.com" },
+          content: "我也是这个星座，最近确实有这种感受。",
+          created_at: new Date(Date.now() - 7200000).toISOString()
+        },
+        {
+          id: 103,
+          author: { id: 203, email: "user3@example.com" },
+          content: "请问这个和月亮星座有关系吗？",
+          created_at: new Date(Date.now() - 10800000).toISOString()
+        }
+      ];
+
+      document.getElementById('comment-list').innerHTML = mockComments.map(c => `
+        <div class="comment-item">
+          <span class="comment-author">${c.author.email}</span>
+          <span class="comment-text">${c.content}</span>
+        </div>
+      `).join('');
+      toast('已加载模拟评论数据', 'info');
+    }
+
+    async function submitComment() {
+      if (!Auth.getToken()) { toast('请先登录', 'info'); return; }
+      const content = document.getElementById('comment-input-field').value.trim();
+      if (!content) return;
+
+      try {
+        await api.post('/api/posts/comment', { post_id: currentCommentPostId, content });
+        document.getElementById('comment-input-field').value = '';
+        toast('评论成功', 'success');
+        openComments(currentCommentPostId); // 刷新评论
+      } catch (err) {
+        toast('评论失败，将使用模拟功能: ' + err.message, 'warning');
+
+        // 模拟提交评论
+        setTimeout(() => {
+          const commentList = document.getElementById('comment-list');
+          const currentContent = commentList.innerHTML;
+
+          // 添加模拟的新评论
+          const newComment = `
+            <div class="comment-item">
+              <span class="comment-author">${Auth.getUser()?.email || "me@example.com"}</span>
+              <span class="comment-text">${content}</span>
+            </div>
+          `;
+
+          // 如果之前是空评论提示，则替换整个内容
+          if (currentContent.includes('还没有评论')) {
+            commentList.innerHTML = newComment;
+          } else {
+            // 否则添加到顶部
+            commentList.innerHTML = newComment + currentContent;
+          }
+
+          document.getElementById('comment-input-field').value = '';
+          toast('已添加模拟评论', 'info');
+        }, 500);
+      }
+    }
+
+    async function publishPost() {
+      if (!Auth.requireLogin()) return;
+      const content = document.getElementById('compose-text').value.trim();
+      if (!content) { toast('请输入内容', 'error'); return; }
+
+      const btn = document.getElementById('btn-publish');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> 发布中...';
+
+      try {
+        await api.post('/api/posts', { content, images: [] });
+        toast('发布成功！', 'success');
+        document.getElementById('compose-text').value = '';
+        document.getElementById('char-count').textContent = '0';
+        closeModal('compose-modal');
+        page = 1;
+        hasMore = true;
+        document.getElementById('post-list').innerHTML = '';
+        loadPosts();
+      } catch (err) {
+        toast('发布失败，将使用模拟功能: ' + err.message, 'warning');
+
+        // 模拟发布功能
+        setTimeout(() => {
+          document.getElementById('compose-text').value = '';
+          document.getElementById('char-count').textContent = '0';
+          closeModal('compose-modal');
+
+          // 添加一个模拟的新帖子
+          const mockNewPost = {
+            id: Date.now(),
+            content: content,
+            author: { id: 100, name: "当前用户", email: Auth.getUser()?.email || "me@example.com" },
+            created_at: new Date().toISOString(),
+            like_count: 0,
+            comment_count: 0,
+            is_liked: false
+          };
+
+          document.getElementById('post-list').innerHTML = '';
+          renderPost(mockNewPost);
+
+          // 如果已经有模拟数据，显示之前的模拟数据
+          const mockPosts = [
+            {
+              id: 1,
+              content: "今天的月亮在水瓶座，大家注意情绪波动，适合创新思考和团队合作！✨🌙",
+              author: { id: 101, name: "星语星愿", email: "star@example.com" },
+              created_at: new Date(Date.now() - 3600000).toISOString(),
+              like_count: 24,
+              comment_count: 5,
+              is_liked: false
+            },
+            {
+              id: 2,
+              content: "分享一下我最近的星盘解读心得：太阳落在第10宫，对事业和社会形象特别在意。木星落在第2宫，财运不错但要注意过度消费。想了解更多的朋友可以私信我！",
+              author: { id: 102, name: "占星小达人", email: "astro@example.com" },
+              created_at: new Date(Date.now() - 7200000).toISOString(),
+              like_count: 18,
+              comment_count: 3,
+              is_liked: true
+            },
+            {
+              id: 3,
+              content: "双子座的朋友们，本月水星逆行会对你们的沟通造成一些障碍，建议重要合同和谈判推迟到下个月再进行。",
+              author: { id: 103, name: "星座研究员", email: "gemini@example.com" },
+              created_at: new Date(Date.now() - 86400000).toISOString(),
+              like_count: 32,
+              comment_count: 8,
+              is_liked: false
+            }
+          ];
+
+          mockPosts.forEach(post => renderPost(post));
+          toast('已使用模拟数据，您的帖子已显示在顶部', 'info');
+        }, 800);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🚀 发布';
+      }
+    }
+
+    function updateCharCount() {
+      const len = document.getElementById('compose-text').value.length;
+      document.getElementById('char-count').textContent = len;
+    }
+
+    function loadMorePosts() {
+      page++;
+      loadPosts(true);
+    }
+
+    function sharePost(id) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(window.location.origin + '/static/community.html#post-' + id);
+        toast('链接已复制', 'success');
+      }
+    }
+
+    function previewImage(url) {
+      window.open(url, '_blank');
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPosts();
+      document.getElementById('comment-input-field').addEventListener('keydown', e => {
+        if (e.key === 'Enter') submitComment();
+      });
+    });
+  </script>
+</body>
+</html>
