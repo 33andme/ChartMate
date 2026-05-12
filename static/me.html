@@ -60,16 +60,6 @@
     .user-email { font-size: 16px; font-weight: 600; margin-bottom: 8px; position: relative; z-index: 1; }
     .user-joined { font-size: 12px; color: var(--text-muted); position: relative; z-index: 1; }
 
-    .vip-card {
-      background: linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(239,68,68,0.1) 100%);
-      border: 1px solid rgba(245,158,11,0.3);
-      border-radius: 14px;
-      padding: 14px 18px;
-      margin: 0 16px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
     .vip-card-left { display: flex; align-items: center; gap: 10px; }
     .vip-icon { font-size: 28px; }
     .vip-title { font-size: 14px; font-weight: 700; color: #fbbf24; }
@@ -85,59 +75,6 @@
       cursor: pointer;
       white-space: nowrap;
     }
-    .btn-active-vip {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: #6ee7b7;
-      border-radius: 8px;
-      padding: 5px 12px;
-      font-size: 12px;
-    }
-
-    /* ── VIP 套餐弹窗 ── */
-    .plan-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-    .plan-item {
-      background: var(--bg-card2);
-      border: 2px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 14px 16px;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .plan-item.selected { border-color: var(--accent-gold); background: rgba(245,158,11,0.08); }
-    .plan-item:hover { border-color: rgba(245,158,11,0.5); }
-    .plan-name { font-size: 15px; font-weight: 700; }
-    .plan-desc { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
-    .plan-price { font-size: 20px; font-weight: 800; color: #f59e0b; }
-    .plan-price span { font-size: 12px; font-weight: 400; color: var(--text-muted); }
-    .plan-badge {
-      font-size: 11px;
-      background: linear-gradient(135deg, #f59e0b, #ef4444);
-      color: white;
-      padding: 2px 8px;
-      border-radius: 20px;
-      margin-left: 8px;
-    }
-    .vip-perks {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-    .perk-item {
-      background: var(--bg-card2);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .perk-item .perk-icon { font-size: 20px; }
-
     /* ── 档案列表 ── */
     .profile-list-item {
       display: flex;
@@ -221,22 +158,9 @@
     <div class="user-avatar" id="user-avatar">🌙</div>
     <div class="user-email" id="user-email">加载中...</div>
     <div class="user-joined" id="user-joined"></div>
-    <div style="margin-top:12px" id="user-vip-badge"></div>
   </div>
 
   <div class="page-content" style="padding-top:16px">
-    <!-- VIP 卡片 -->
-    <div class="vip-card" id="vip-card">
-      <div class="vip-card-left">
-        <div class="vip-icon">👑</div>
-        <div>
-          <div class="vip-title">升级 VIP</div>
-          <div class="vip-desc">解锁高级 AI 模型，获得更深度星盘解读</div>
-        </div>
-      </div>
-      <button class="btn-upgrade" onclick="openModal('vip-modal')">升级 VIP</button>
-    </div>
-
     <!-- 统计 -->
     <div class="stats-row">
       <div class="stat-card">
@@ -298,55 +222,6 @@
       <span class="nav-icon">👤</span><span>我的</span>
     </a>
   </nav>
-
-  <!-- VIP 升级弹窗 -->
-  <div class="modal-overlay" id="vip-modal" onclick="handleBg(event,'vip-modal')">
-    <div class="modal-sheet" onclick="event.stopPropagation()">
-      <div class="modal-handle"></div>
-      <div class="modal-title">👑 升级 VIP 会员</div>
-
-      <!-- 权益说明 -->
-      <div class="vip-perks">
-        <div class="perk-item"><span class="perk-icon">🤖</span>高级 AI 模型</div>
-        <div class="perk-item"><span class="perk-icon">🌐</span>完整星盘报告</div>
-        <div class="perk-item"><span class="perk-icon">💬</span>无限次 AI 问答</div>
-        <div class="perk-item"><span class="perk-icon">⚡</span>优先响应速度</div>
-      </div>
-
-      <!-- 套餐选择 -->
-      <div class="plan-list" id="plan-list">
-        <div class="plan-item selected" data-plan="monthly" onclick="selectPlan(this,'monthly')">
-          <div>
-            <div class="plan-name">月度会员</div>
-            <div class="plan-desc">连续30天尊享权益</div>
-          </div>
-          <div class="plan-price">¥9.9<span>/月</span></div>
-        </div>
-        <div class="plan-item" data-plan="quarterly" onclick="selectPlan(this,'quarterly')">
-          <div>
-            <div class="plan-name">季度会员 <span class="plan-badge">推荐</span></div>
-            <div class="plan-desc">连续90天，相当于¥8.3/月</div>
-          </div>
-          <div class="plan-price">¥24.9<span>/季</span></div>
-        </div>
-        <div class="plan-item" data-plan="yearly" onclick="selectPlan(this,'yearly')">
-          <div>
-            <div class="plan-name">年度会员 <span class="plan-badge">最划算</span></div>
-            <div class="plan-desc">连续365天，相当于¥5.7/月</div>
-          </div>
-          <div class="plan-price">¥68<span>/年</span></div>
-        </div>
-      </div>
-
-      <button class="btn-primary" id="btn-activate-vip" onclick="activateVip()"
-              style="background:linear-gradient(135deg,#f59e0b,#ef4444);box-shadow:0 4px 15px rgba(245,158,11,0.4)">
-        👑 立即开通（测试直接激活）
-      </button>
-      <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:10px">
-        测试环境无需支付，点击直接激活
-      </p>
-    </div>
-  </div>
 
   <!-- 新建档案模态框 -->
   <div class="modal-overlay" id="add-profile-modal" onclick="handleBg(event,'add-profile-modal')">
@@ -426,20 +301,6 @@
           local.slice(0, 3) + '***@' + domain;
         document.getElementById('user-joined').textContent =
           '加入于 ' + new Date(user.created_at).toLocaleDateString('zh-CN');
-
-        // VIP 状态
-        const vipBadge = document.getElementById('user-vip-badge');
-        const vipCard = document.getElementById('vip-card');
-        if (user.is_vip) {
-          vipBadge.innerHTML = '<span class="badge badge-vip">👑 VIP 会员</span>';
-          vipCard.querySelector('.btn-upgrade').parentElement.innerHTML =
-            `<div class="vip-card-left"><div class="vip-icon">👑</div>
-             <div><div class="vip-title" style="color:#6ee7b7">VIP 已激活</div>
-             <div class="vip-desc">到期：${user.vip_expiry ? new Date(user.vip_expiry).toLocaleDateString('zh-CN') : '永久'}</div>
-             </div></div><span class="btn-active-vip">✓ 已激活</span>`;
-        } else {
-          vipBadge.innerHTML = '<span class="badge badge-purple">免费会员</span>';
-        }
 
         // 更新本地缓存
         Auth.setUser(user);

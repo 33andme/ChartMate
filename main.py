@@ -101,10 +101,10 @@ admin = Admin(
 
 
 class UserAdmin(ModelView, model=User):
-    column_list = [User.id, User.email, User.is_vip, User.vip_expiry, User.created_at]
+    column_list = [User.id, User.email, User.created_at]
     column_searchable_list = [User.email]
-    column_sortable_list = [User.id, User.created_at, User.is_vip]
-    column_filters = [User.is_vip]
+    column_sortable_list = [User.id, User.created_at]
+    column_filters = []
     name = "用户管理"
     name_plural = "用户列表"
     icon = "fa-solid fa-users"
@@ -554,8 +554,6 @@ def register(req: RegisterRequest, session: Session = Depends(get_session)):
         "user": {
             "id": user.id,
             "email": user.email,
-            "is_vip": user.is_vip,
-            "vip_expiry": None,
         },
         "message": "注册成功，欢迎加入！",
     }
@@ -570,8 +568,6 @@ def login(req: LoginRequest, session: Session = Depends(get_session)):
         "user": {
             "id": user.id,
             "email": user.email,
-            "is_vip": user.is_vip,
-            "vip_expiry": user.vip_expiry.isoformat() if user.vip_expiry else None,
         },
         "message": "登录成功",
     }
@@ -582,54 +578,8 @@ def get_me(current_user: User = Depends(get_current_user)):
     return {
         "id": current_user.id,
         "email": current_user.email,
-        "is_vip": current_user.is_vip,
-        "vip_expiry": current_user.vip_expiry.isoformat() if current_user.vip_expiry else None,
         "created_at": current_user.created_at.isoformat(),
     }
-
-
-# VIP 套餐配置
-VIP_PLANS = {
-    "monthly":  {"name": "月度会员", "days": 30,  "price": 9.9},
-    "quarterly":{"name": "季度会员", "days": 90,  "price": 24.9},
-    "yearly":   {"name": "年度会员", "days": 365, "price": 68.0},
-}
-
-
-@app.post("/api/vip/activate", summary="激活VIP（模拟支付）")
-def activate_vip(
-    plan: str = "monthly",
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
-):
-    """模拟VIP激活，生产环境需接入支付宝/微信支付"""
-    if plan not in VIP_PLANS:
-        raise HTTPException(status_code=400, detail="无效的套餐类型")
-
-    config = VIP_PLANS[plan]
-    from datetime import timedelta
-
-    # 已是VIP则在到期时间基础上续费，否则从现在开始
-    base_time = current_user.vip_expiry if (current_user.is_vip and current_user.vip_expiry and current_user.vip_expiry > datetime.utcnow()) else datetime.utcnow()
-    current_user.is_vip = True
-    current_user.vip_expiry = base_time + timedelta(days=config["days"])
-    session.add(current_user)
-    session.commit()
-    session.refresh(current_user)
-
-    return {
-        "message": f"🎉 {config['name']}激活成功！",
-        "is_vip": True,
-        "vip_expiry": current_user.vip_expiry.isoformat(),
-        "plan": config,
-    }
-
-
-@app.get("/api/vip/plans", summary="获取VIP套餐列表")
-def get_vip_plans():
-    return {"plans": VIP_PLANS}
-
-
 
 
 @app.post("/api/profile", summary="创建档案（自动计算星盘）")
@@ -939,7 +889,6 @@ _ai_base = os.getenv("AI_BASE_URL", "https://api.deepseek.com/v1")
 AI_CHAT_URL = _ai_base if _ai_base.endswith("/chat/completions") else f"{_ai_base}/chat/completions"
 AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_FREE_MODEL = os.getenv("AI_FREE_MODEL", "deepseek-chat")
-AI_VIP_MODEL = os.getenv("AI_VIP_MODEL", "deepseek-chat")
 
 
 async def _post_ai(payload: dict) -> dict:
@@ -1068,8 +1017,8 @@ async def chat(
         raise HTTPException(status_code=404, detail="档案不存在")
 
     # 选择模型
-    model = AI_VIP_MODEL if current_user.is_vip else AI_FREE_MODEL
-    model_version = "vip" if current_user.is_vip else "free"
+    model = AI_FREE_MODEL
+    model_version = "free"
 
     # 构建 System Prompt（注入星盘数据）
     astral_config = profile.get_astral_config()

@@ -185,21 +185,6 @@
     }
     .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* VIP 提示横幅 */
-    .vip-banner {
-      background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.1));
-      border: 1px solid rgba(245,158,11,0.3);
-      border-radius: 12px;
-      padding: 10px 14px;
-      margin: 0 16px 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 12px;
-    }
-    .vip-banner span { color: #fbbf24; }
-    .btn-vip { color: #f59e0b; font-size: 12px; background: none; border: none; cursor: pointer; }
-
     /* 档案选择模态 */
     .profile-select-list { display: flex; flex-direction: column; gap: 10px; }
     .profile-select-item {
@@ -229,12 +214,6 @@
     </div>
     <button class="btn-change-profile" onclick="openModal('profile-select-modal')">切换</button>
     <button class="top-bar-action" onclick="clearHistory()" title="清空记录">🗑️</button>
-  </div>
-
-  <!-- VIP 横幅（非VIP显示） -->
-  <div class="vip-banner" id="vip-banner" style="display:none;margin-top:8px">
-    <span>✨ 当前使用免费模式，升级 VIP 获得更智慧的占星解读</span>
-    <button class="btn-vip">升级 ›</button>
   </div>
 
   <!-- 消息列表 -->
@@ -307,10 +286,6 @@
 
     async function init() {
       if (!Auth.requireLogin()) return;
-      const user = Auth.getUser();
-      if (user && !user.is_vip) {
-        document.getElementById('vip-banner').style.display = 'flex';
-      }
 
       await loadProfiles();
     }

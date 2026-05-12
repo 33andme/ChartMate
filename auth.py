@@ -224,8 +224,7 @@ def register_or_login_with_code(
         # 新用户注册
         user = User(
             email=email,
-            password_hash=hash_password(code),  # 初始密码用验证码
-            is_vip=False,
+            password_hash=hash_password(code),
             created_at=datetime.utcnow(),
         )
         session.add(user)
@@ -262,7 +261,6 @@ def register_user(
     user = User(
         email=email,
         password_hash=hash_password(password),
-        is_vip=False,
         created_at=datetime.utcnow(),
     )
     session.add(user)
