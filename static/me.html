@@ -60,21 +60,6 @@
     .user-email { font-size: 16px; font-weight: 600; margin-bottom: 8px; position: relative; z-index: 1; }
     .user-joined { font-size: 12px; color: var(--text-muted); position: relative; z-index: 1; }
 
-    .vip-card-left { display: flex; align-items: center; gap: 10px; }
-    .vip-icon { font-size: 28px; }
-    .vip-title { font-size: 14px; font-weight: 700; color: #fbbf24; }
-    .vip-desc { font-size: 11px; color: var(--text-muted); }
-    .btn-upgrade {
-      background: linear-gradient(135deg, #f59e0b, #ef4444);
-      color: white;
-      border: none;
-      border-radius: 20px;
-      padding: 8px 18px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
     /* ── 档案列表 ── */
     .profile-list-item {
       display: flex;
@@ -405,38 +390,6 @@
 
     function confirmLogout() {
       if (confirm('确定退出登录？')) Auth.logout();
-    }
-
-    // ── VIP ──────────────────────────────────────────
-    let selectedPlan = 'monthly';
-
-    function selectPlan(el, plan) {
-      selectedPlan = plan;
-      document.querySelectorAll('.plan-item').forEach(p => p.classList.remove('selected'));
-      el.classList.add('selected');
-    }
-
-    async function activateVip() {
-      const btn = document.getElementById('btn-activate-vip');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> 激活中...';
-      try {
-        const data = await api.post(`/api/vip/activate?plan=${selectedPlan}`);
-        toast(data.message, 'success');
-        closeModal('vip-modal');
-        // 更新本地用户信息
-        const user = Auth.getUser() || {};
-        user.is_vip = true;
-        user.vip_expiry = data.vip_expiry;
-        Auth.setUser(user);
-        // 刷新页面用户信息
-        loadUserInfo();
-      } catch (err) {
-        toast(err.message, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '👑 立即开通（测试直接激活）';
-      }
     }
 
     function updateThemeDesc() {

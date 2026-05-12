@@ -1006,8 +1006,7 @@ async def chat(
 ):
     """
     AI 对话核心逻辑：
-    1. 根据 is_vip 选择模型
-    2. 将 astral_config 注入 System Prompt
+    1. 将 astral_config 注入 System Prompt
     3. 携带历史对话（最近10条）
     4. 存储对话记录
     """

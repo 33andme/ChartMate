@@ -106,7 +106,7 @@ class ChatLog(SQLModel, table=True):
     role: str = Field(max_length=10, description="'user' or 'ai'")
     content: str = Field(sa_column=Column(Text, nullable=False))
     model_version: str = Field(default="free", max_length=20,
-                                description="'free' 或 'vip'")
+                                description="ai model version")
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
