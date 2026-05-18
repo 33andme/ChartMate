@@ -7,7 +7,7 @@ import json
 import math
 import hashlib
 import random
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 import pytz
 
@@ -235,7 +235,7 @@ def _calculate_with_flatlib(
     dt = Datetime(dt_str, time_str, '+00:00')
 
     # 创建地理位置对象
-    pos = GeoPos(f'{lat:.6f}', f'{lon:.6f}')
+    pos = GeoPos(lat, lon)
 
     # 创建星盘
     chart = Chart(dt, pos)
@@ -807,7 +807,7 @@ def _calculate_daily_positions(target_date, city_name="北京"):
     lat, lon = city_info["lat"], city_info["lon"]
 
     # 创建地点对象
-    pos = GeoPos(f'{lat:.6f}', f'{lon:.6f}')
+    pos = GeoPos(lat, lon)
 
     # 创建当日星盘
     chart = Chart(dt, pos)

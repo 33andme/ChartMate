@@ -582,6 +582,24 @@ def get_me(current_user: User = Depends(get_current_user)):
     }
 
 
+@app.get("/api/user/stats", summary="获取当前用户统计数据")
+def get_user_stats(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    from sqlalchemy import func
+    chat_count = session.exec(
+        select(func.count(ChatLog.id))
+        .where(ChatLog.user_id == current_user.id)
+        .where(ChatLog.role == "user")
+    ).one()
+    post_count = session.exec(
+        select(func.count(Post.id))
+        .where(Post.user_id == current_user.id)
+    ).one()
+    return {"chat_count": chat_count, "post_count": post_count}
+
+
 @app.post("/api/profile", summary="创建档案（自动计算星盘）")
 def create_profile(
     req: ProfileCreate,

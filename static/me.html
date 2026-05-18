@@ -290,8 +290,9 @@
         // 更新本地缓存
         Auth.setUser(user);
 
-        // 加载档案
+        // 加载档案和统计
         loadProfiles();
+        loadStats();
       } catch (err) {
         toast(err.message, 'error');
       }
@@ -406,6 +407,16 @@
 
     loadUserInfo();
     updateThemeDesc();
+
+    async function loadStats() {
+      try {
+        const data = await api.get('/api/user/stats');
+        document.getElementById('stat-chats').textContent = data.chat_count ?? '--';
+        document.getElementById('stat-posts').textContent = data.post_count ?? '--';
+      } catch (err) {
+        // 静默失败，保持 -- 显示
+      }
+    }
 
     // 加载城市数据
     loadCities();
