@@ -1075,6 +1075,8 @@ async def chat(
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"AI 调用异常: {str(e)}")
 
     # 存储对话记录

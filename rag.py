@@ -1,11 +1,11 @@
 """
 rag.py - RAG 知识库模块
-使用 LanceDB 本地向量库（兼容 Python 3.8，无 sqlite3 版本要求）
-Embedding 使用 sentence-transformers 本地模型（无需 API Key）
+使用 LangChain + LanceDB 向量库 + HuggingFace 本地 Embedding
 """
 import os
 import io
-from typing import Optional
+import uuid
+from typing import List
 
 os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 
@@ -14,59 +14,73 @@ TABLE_NAME = "astro_knowledge"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
-_db = None
-_table = None
-_embed_model = None
+_vectorstore = None
+_embeddings = None
 
 
-def _get_embed_model():
-    global _embed_model
-    if _embed_model is not None:
-        return _embed_model
-    from sentence_transformers import SentenceTransformer
-    _embed_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-    return _embed_model
+def _get_embeddings():
+    global _embeddings
+    if _embeddings is not None:
+        return _embeddings
+    from langchain_huggingface import HuggingFaceEmbeddings
+    _embeddings = HuggingFaceEmbeddings(
+        model_name="paraphrase-multilingual-MiniLM-L12-v2",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
+    )
+    return _embeddings
 
 
-def _embed(texts):
-    model = _get_embed_model()
-    return model.encode(texts, normalize_embeddings=True).tolist()
-
-
-def _get_table():
-    global _db, _table
-    if _table is not None:
-        return _table
+def _get_vectorstore():
+    global _vectorstore
+    if _vectorstore is not None:
+        return _vectorstore
 
     import lancedb
-    import pyarrow as pa
+    from langchain_community.vectorstores import LanceDB
 
-    _db = lancedb.connect(LANCE_PATH)
-    schema = pa.schema([
-        pa.field("id", pa.string()),
-        pa.field("doc_id", pa.string()),
-        pa.field("filename", pa.string()),
-        pa.field("chunk_index", pa.int32()),
-        pa.field("text", pa.string()),
-        pa.field("vector", pa.list_(pa.float32(), 384)),
-    ])
+    embeddings = _get_embeddings()
+    db = lancedb.connect(LANCE_PATH)
 
-    if TABLE_NAME in _db.table_names():
-        _table = _db.open_table(TABLE_NAME)
+    if TABLE_NAME in db.table_names():
+        _vectorstore = LanceDB(
+            connection=db,
+            embedding=embeddings,
+            table_name=TABLE_NAME,
+            vector_key="vector",
+            id_key="id",
+            text_key="text",
+            mode="append",
+        )
     else:
-        _table = _db.create_table(TABLE_NAME, schema=schema)
+        from langchain_core.documents import Document
+        placeholder = Document(
+            page_content="__init__",
+            metadata={"doc_id": "__init__", "filename": "", "chunk_index": 0},
+        )
+        _vectorstore = LanceDB.from_documents(
+            documents=[placeholder],
+            embedding=embeddings,
+            connection=db,
+            table_name=TABLE_NAME,
+            vector_key="vector",
+            id_key="id",
+            text_key="text",
+            mode="append",
+        )
+        db.open_table(TABLE_NAME).delete("metadata.doc_id = '__init__'")
 
-    return _table
+    return _vectorstore
 
 
-def _chunk_text(text: str):
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + CHUNK_SIZE
-        chunks.append(text[start:end])
-        start += CHUNK_SIZE - CHUNK_OVERLAP
-    return [c for c in chunks if c.strip()]
+def _chunk_text(text: str) -> List[str]:
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
+        separators=["\n\n", "\n", "。", "！", "？", ".", "!", "?", " ", ""],
+    )
+    return [c for c in splitter.split_text(text) if c.strip()]
 
 
 def extract_text(file_bytes: bytes, filename: str) -> str:
@@ -89,66 +103,77 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
 
 
 def add_document(doc_id: str, text: str, metadata: dict) -> int:
-    table = _get_table()
+    from langchain_core.documents import Document
+
     chunks = _chunk_text(text)
     if not chunks:
         return 0
 
+    # 先删旧数据
     delete_document(doc_id)
 
-    vectors = _embed(chunks)
     filename = metadata.get("filename", "")
-    rows = [
-        {
-            "id": f"{doc_id}_chunk_{i}",
-            "doc_id": doc_id,
-            "filename": filename,
-            "chunk_index": i,
-            "text": chunk,
-            "vector": vectors[i],
-        }
+    docs = [
+        Document(
+            page_content=chunk,
+            metadata={
+                "doc_id": doc_id,
+                "filename": filename,
+                "chunk_index": i,
+            },
+        )
         for i, chunk in enumerate(chunks)
     ]
-    table.add(rows)
+
+    vs = _get_vectorstore()
+    ids = [f"{doc_id}_chunk_{i}" for i in range(len(docs))]
+    vs.add_documents(docs, ids=ids)
+
     return len(chunks)
 
 
 def delete_document(doc_id: str):
-    table = _get_table()
     try:
-        table.delete(f"doc_id = '{doc_id}'")
+        import lancedb
+        db = lancedb.connect(LANCE_PATH)
+        if TABLE_NAME not in db.table_names():
+            return
+        table = db.open_table(TABLE_NAME)
+        table.delete(f"metadata.doc_id = '{doc_id}'")
     except Exception:
         pass
 
 
-def get_chunks(doc_id: str):
+def get_chunks(doc_id: str) -> List[dict]:
     """返回某文档所有切块，按 chunk_index 排序"""
-    table = _get_table()
     try:
-        results = (
-            table.search()
-            .where(f"doc_id = '{doc_id}'")
-            .select(["chunk_index", "text"])
-            .to_list()
+        import lancedb
+        db = lancedb.connect(LANCE_PATH)
+        if TABLE_NAME not in db.table_names():
+            return []
+        table = db.open_table(TABLE_NAME)
+        df = table.to_pandas()
+        rows = df[df["metadata"].apply(lambda m: m.get("doc_id") == doc_id)]
+        return sorted(
+            [{"chunk_index": r["metadata"]["chunk_index"], "text": r["text"]} for _, r in rows.iterrows()],
+            key=lambda x: x["chunk_index"],
         )
-        return sorted(results, key=lambda x: x["chunk_index"])
     except Exception:
         return []
 
 
-def search(query: str, n_results: int = 3):
-    table = _get_table()
+def search(query: str, n_results: int = 3) -> List[str]:
     try:
+        import lancedb
+        db = lancedb.connect(LANCE_PATH)
+        if TABLE_NAME not in db.table_names():
+            return []
+        table = db.open_table(TABLE_NAME)
         if table.count_rows() == 0:
             return []
     except Exception:
         return []
 
-    query_vec = _embed([query])[0]
-    results = (
-        table.search(query_vec)
-        .limit(n_results)
-        .select(["text"])
-        .to_list()
-    )
-    return [r["text"] for r in results]
+    vs = _get_vectorstore()
+    docs = vs.similarity_search(query, k=n_results)
+    return [doc.page_content for doc in docs]

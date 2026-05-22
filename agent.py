@@ -49,18 +49,17 @@ def build_tools(context: dict) -> list:
     构建 LangChain Tool 列表
     context 包含 profile、session、user，用于 query_user_data 工具
     """
-    import asyncio
-    import httpx
 
-    async def _search_web_impl(query: str) -> str:
+    def search_web_sync(query: str) -> str:
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(
-                    "https://api.duckduckgo.com/",
-                    params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},
-                    headers={"User-Agent": "Mozilla/5.0"},
-                )
-                data = resp.json()
+            import httpx as _httpx
+            resp = _httpx.get(
+                "https://api.duckduckgo.com/",
+                params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=10.0,
+            )
+            data = resp.json()
             parts = []
             if data.get("AbstractText"):
                 parts.append(data["AbstractText"])
@@ -68,18 +67,6 @@ def build_tools(context: dict) -> list:
                 if isinstance(topic, dict) and topic.get("Text"):
                     parts.append(topic["Text"])
             return "\n".join(parts) if parts else f"未找到「{query}」的即时结果。"
-        except Exception as e:
-            return f"搜索失败: {e}"
-
-    def search_web_sync(query: str) -> str:
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, _search_web_impl(query))
-                    return future.result(timeout=15)
-            return loop.run_until_complete(_search_web_impl(query))
         except Exception as e:
             return f"搜索失败: {e}"
 

@@ -237,8 +237,8 @@ def _calculate_with_flatlib(
     # 创建地理位置对象
     pos = GeoPos(lat, lon)
 
-    # 创建星盘
-    chart = Chart(dt, pos)
+    # 创建星盘（显式传入所有天体，否则默认只加载传统七星，天王/海王/冥王会 KeyError）
+    chart = Chart(dt, pos, IDs=const.LIST_OBJECTS)
 
     # 定义行星映射
     planets_map = {
@@ -809,8 +809,8 @@ def _calculate_daily_positions(target_date, city_name="北京"):
     # 创建地点对象
     pos = GeoPos(lat, lon)
 
-    # 创建当日星盘
-    chart = Chart(dt, pos)
+    # 创建当日星盘（显式传入所有天体）
+    chart = Chart(dt, pos, IDs=const.LIST_OBJECTS)
 
     positions = {}
     planets_map = {
@@ -839,19 +839,21 @@ def _calculate_fortune_scores(user_astral: dict, daily_positions: dict):
     """基于用户星盘和当日天象计算运势分数"""
     user_planets = user_astral.get("planets", {})
 
-    # 基础分数
     base_scores = {
         "overall": 75, "love": 75, "wealth": 75,
         "career": 75, "study": 75, "social": 75,
     }
 
-    # 分析相位影响
     aspect_bonuses = _analyze_daily_aspects(user_planets, daily_positions)
 
-    # 应用相位加成
-    for category, bonus in aspect_bonuses.items():
-        base_scores[category] = max(50, min(99, base_scores[category] + bonus))
+    # details 是列表，单独取出，不参与数值计算
+    details = aspect_bonuses.pop("details", [])
 
+    for category, bonus in aspect_bonuses.items():
+        if category in base_scores:
+            base_scores[category] = max(50, min(99, base_scores[category] + bonus))
+
+    base_scores["details"] = details
     return base_scores
 
 
