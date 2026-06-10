@@ -58,7 +58,7 @@ TOOL_DEFINITIONS = [
 async def _search_web(query: str) -> str:
     """调用 DuckDuckGo 即时答案 API（无需 Key）"""
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
             resp = await client.get(
                 "https://api.duckduckgo.com/",
                 params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},

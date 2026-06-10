@@ -958,7 +958,7 @@ async def _post_ai(payload: dict) -> dict:
         "Authorization": f"Bearer {AI_API_KEY}",
         "Content-Type": "application/json",
     }
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=60.0, trust_env=False) as client:
         response = await client.post(AI_CHAT_URL, headers=headers, json=payload)
         if response.status_code != 200:
             raise HTTPException(status_code=502, detail=f"AI 服务调用失败: {response.text}")
@@ -1039,7 +1039,7 @@ async def call_ai_api(
         "max_tokens": 1000,
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=30.0, trust_env=False) as client:
         response = await client.post(AI_CHAT_URL, headers=headers, json=payload)
         if response.status_code != 200:
             raise HTTPException(status_code=502, detail=f"AI 服务调用失败: {response.text}")

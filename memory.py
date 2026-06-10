@@ -97,7 +97,7 @@ async def extract_and_save_memories(
             "temperature": 0.1,
             "max_tokens": 500,
         }
-        async with httpx.AsyncClient(timeout=20.0) as client:
+        async with httpx.AsyncClient(timeout=20.0, trust_env=False) as client:
             resp = await client.post(AI_CHAT_URL, headers=headers, json=payload)
             if resp.status_code != 200:
                 return

@@ -1,20 +1,17 @@
 """
 rag.py - RAG 知识库模块
-使用 LangChain + LanceDB 向量库 + HuggingFace 本地 Embedding
+使用 LangChain + LanceDB 向量库 + SiliconFlow Embedding API
 """
 import os
 import io
 import uuid
 from typing import List
 
-os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
-
 LANCE_PATH = "./lance_db"
 TABLE_NAME = "astro_knowledge"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
-# 全局单例：避免每次请求重新加载 HuggingFace 模型（首次加载耗时较长）
 _vectorstore = None
 _embeddings = None
 
@@ -23,11 +20,11 @@ def _get_embeddings():
     global _embeddings
     if _embeddings is not None:
         return _embeddings
-    from langchain_huggingface import HuggingFaceEmbeddings
-    _embeddings = HuggingFaceEmbeddings(
-        model_name="paraphrase-multilingual-MiniLM-L12-v2",
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True},
+    from langchain_openai import OpenAIEmbeddings
+    _embeddings = OpenAIEmbeddings(
+        model="BAAI/bge-m3",
+        openai_api_key=os.getenv("AI_API_KEY", ""),
+        openai_api_base=os.getenv("AI_BASE_URL", "https://api.siliconflow.cn/v1"),
     )
     return _embeddings
 

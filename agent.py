@@ -21,12 +21,14 @@ from rag import search as rag_search
 
 def build_llm(model: str) -> ChatOpenAI:
     """构建 LangChain LLM，对接硅基流动 OpenAI 兼容接口"""
+    import httpx
     return ChatOpenAI(
         model=model,
         openai_api_key=os.getenv("AI_API_KEY", ""),
         openai_api_base=os.getenv("AI_BASE_URL", "https://api.siliconflow.cn/v1"),
         temperature=0.8,
         max_tokens=1500,
+        http_async_client=httpx.AsyncClient(trust_env=False),
     )
 
 
