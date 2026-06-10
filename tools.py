@@ -5,6 +5,7 @@ tools.py - AI 工具调用定义和执行
 import json
 import httpx
 
+# OpenAI function calling 格式的工具描述，由 call_ai_with_tools 在请求时传给模型
 TOOL_DEFINITIONS = [
     {
         "type": "function",
@@ -83,7 +84,6 @@ async def _search_web(query: str) -> str:
 def _query_user_data(data_type: str, context: dict) -> str:
     """从 context 中读取用户数据并格式化返回"""
     profile = context.get("profile")
-    session = context.get("session")
     user = context.get("user")
 
     if not profile:
@@ -107,16 +107,16 @@ def _query_user_data(data_type: str, context: dict) -> str:
         return json.dumps(astral, ensure_ascii=False, indent=2)
 
     if data_type == "fortune_history":
-        if not session:
-            return "无法获取运势历史。"
-        from sqlmodel import select
+        from sqlmodel import Session, select
         from models import DailyFortune
-        records = session.exec(
-            select(DailyFortune)
-            .where(DailyFortune.profile_id == profile.id)
-            .order_by(DailyFortune.fortune_date.desc())
-            .limit(7)
-        ).all()
+        from database import engine
+        with Session(engine) as s:
+            records = s.exec(
+                select(DailyFortune)
+                .where(DailyFortune.profile_id == profile.id)
+                .order_by(DailyFortune.fortune_date.desc())
+                .limit(7)
+            ).all()
         if not records:
             return "暂无运势历史记录。"
         result = []

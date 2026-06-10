@@ -14,6 +14,7 @@ TABLE_NAME = "astro_knowledge"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
+# 全局单例：避免每次请求重新加载 HuggingFace 模型（首次加载耗时较长）
 _vectorstore = None
 _embeddings = None
 
@@ -54,6 +55,7 @@ def _get_vectorstore():
         )
     else:
         from langchain_core.documents import Document
+        # LanceDB 必须用真实文档建表，无法空建；写入一条占位符后立即删除
         placeholder = Document(
             page_content="__init__",
             metadata={"doc_id": "__init__", "filename": "", "chunk_index": 0},
@@ -109,7 +111,7 @@ def add_document(doc_id: str, text: str, metadata: dict) -> int:
     if not chunks:
         return 0
 
-    # 先删旧数据
+    # 先删旧数据，支持同一文档重复上传时的幂等更新
     delete_document(doc_id)
 
     filename = metadata.get("filename", "")

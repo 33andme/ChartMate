@@ -135,6 +135,7 @@ async def extract_and_save_memories(
             ).all()
 
             duplicate = next(
+                # 前20字相同视为同一条记忆，更新而非新增，防止语义重复积累
                 (m for m in existing if content[:20] in m.content or m.content[:20] in content),
                 None
             )

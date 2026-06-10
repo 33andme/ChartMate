@@ -17,9 +17,13 @@ try:
     from flatlib.geopos import GeoPos
     from flatlib.chart import Chart
     from flatlib import const
+    import flatlib as _flatlib
     FLATLIB_AVAILABLE = True
+    # 星历文件路径（flatlib 安装自带）
+    _EPHE_PATH = _flatlib.PATH_RES + 'swefiles'
 except ImportError:
     FLATLIB_AVAILABLE = False
+    _EPHE_PATH = ""
     print("⚠️  flatlib 未安装，将使用模拟星盘数据。运行: pip install flatlib")
 
 
@@ -160,6 +164,7 @@ def get_sun_sign_by_date(birth_date: datetime) -> str:
                (start_m < month < end_m):
                 return sign
         else:
+            # start_m > end_m 说明该星座跨年（如摩羯座 12/22-1/19），需分段判断
             if (month == start_m and day >= start_d) or \
                (month == end_m and day <= end_d) or \
                month > start_m or month < end_m:
@@ -237,10 +242,12 @@ def _calculate_with_flatlib(
     # 创建地理位置对象
     pos = GeoPos(lat, lon)
 
+    # 每次创建 Chart 前强制设置路径，防止被其他调用覆盖
+    import swisseph as _swe
+    _swe.set_ephe_path(_EPHE_PATH)
+
     # 创建星盘（显式传入所有天体，否则默认只加载传统七星，天王/海王/冥王会 KeyError）
     chart = Chart(dt, pos, IDs=const.LIST_OBJECTS)
-
-    # 定义行星映射
     planets_map = {
         const.SUN:     "Sun",
         const.MOON:    "Moon",
@@ -329,6 +336,7 @@ def _calculate_mock(
     lon: float
 ) -> dict:
     """flatlib 不可用时的 Mock 降级（太阳星座仍用真实日期推算）"""
+    # 用出生信息生成确定性哈希，确保同一用户每次获得相同的模拟星盘
     seed_str = f"{birth_time.year}{birth_time.month}{birth_time.day}{lat}{lon}"
     hash_val = int(hashlib.md5(seed_str.encode()).hexdigest(), 16)
 
@@ -616,7 +624,7 @@ def _analyze_synastry_aspects(planets_1: dict, planets_2: dict, name_1: str, nam
 
     # 按影响强度排序
     aspects.sort(key=lambda x: abs(x["influence"]), reverse=True)
-    return aspects[:15]  # 返回前15个最重要的相位
+    return aspects[:15]  # 只保留最强的15个相位，避免解读信息过载
 
 
 def _get_synastry_aspect_info(angle: float) -> dict:
@@ -809,6 +817,10 @@ def _calculate_daily_positions(target_date, city_name="北京"):
     # 创建地点对象
     pos = GeoPos(lat, lon)
 
+    # 每次创建 Chart 前强制设置路径，防止被其他调用覆盖
+    import swisseph as _swe
+    _swe.set_ephe_path(_EPHE_PATH)
+
     # 创建当日星盘（显式传入所有天体）
     chart = Chart(dt, pos, IDs=const.LIST_OBJECTS)
 
@@ -975,6 +987,7 @@ def _fallback_fortune_scores(sun_sign: str, moon_sign: str, target_date):
     """备选运势计算方案（当flatlib不可用时）"""
     seed = f"{target_date}{sun_sign}{moon_sign}"
     hash_val = int(hashlib.md5(seed.encode()).hexdigest(), 16)
+    # 用固定种子初始化 Random，保证同一天同一用户的运势分数不变
     rng = random.Random(hash_val)
 
     return {

@@ -14,6 +14,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+
+# passlib 1.7.x 访问 bcrypt.__about__.__version__，bcrypt 4.x 删除了该属性；打补丁兼容
+import bcrypt as _bcrypt
+if not hasattr(_bcrypt, '__about__'):
+    _bcrypt.__about__ = type('_about', (), {'__version__': _bcrypt.__version__})()
 from sqlmodel import Session, select
 
 from database import get_session
@@ -121,7 +126,7 @@ def send_verify_code(email: str, session: Session) -> str:
     """
     发送验证码（生产环境将通过邮件发送）
     """
-    # 清除该邮箱旧的验证码
+    # 每次发码前清除旧记录，避免同一邮箱积累多条有效验证码
     old_codes = session.exec(
         select(VerifyCode).where(VerifyCode.email == email)
     ).all()
@@ -221,7 +226,7 @@ def register_or_login_with_code(
     is_new_user = False
 
     if not user:
-        # 新用户注册
+        # 新用户注册：用验证码作为初始密码哈希，首次登录后可凭此验证码重置
         user = User(
             email=email,
             password_hash=hash_password(code),

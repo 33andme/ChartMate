@@ -94,6 +94,7 @@ def build_tools(context: dict) -> list:
 # ── 记忆管理 ──────────────────────────────────────────────────────────────────
 
 # 按 user_id + profile_id 缓存 Memory 对象，实现跨请求的 session 记忆
+# 进程级 session 缓存，服务重启后清空；多进程/多实例部署时需改为 Redis 等共享存储
 _memory_store: dict = {}
 
 
@@ -164,7 +165,7 @@ def build_agent_executor(
         tools=tools,
         memory=memory,
         verbose=False,
-        max_iterations=3,
+        max_iterations=3,  # 防止模型陷入工具调用死循环
         handle_parsing_errors=True,
         return_intermediate_steps=False,
     )
@@ -186,11 +187,13 @@ async def run_agent(
     4. 返回 AI 回复文本
     """
     # RAG 检索注入
+    rag_hit = False
     if rag_query:
         relevant_docs = rag_search(rag_query)
         if relevant_docs:
             rag_context = "\n\n【知识库参考】\n" + "\n---\n".join(relevant_docs)
             system_prompt = system_prompt + rag_context
+            rag_hit = True
 
     user_id = context.get("user").id if context.get("user") else 0
     profile_id = context.get("profile").id if context.get("profile") else 0
@@ -202,11 +205,17 @@ async def run_agent(
 
     try:
         result = await executor.ainvoke({"input": user_message})
-        return result.get("output", "")
+        output = result.get("output", "")
+        if rag_hit:
+            output = output + "\n\n📚 参考了知识库"
+        return output
     except Exception as e:
         # 降级：直接调用 LLM 不带工具
         llm = build_llm(model)
         from langchain_core.messages import HumanMessage, SystemMessage as SM
         msgs = [SM(content=system_prompt), HumanMessage(content=user_message)]
         resp = await llm.ainvoke(msgs)
-        return resp.content
+        output = resp.content
+        if rag_hit:
+            output = output + "\n\n📚 参考了知识库"
+        return output

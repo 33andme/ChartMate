@@ -378,6 +378,39 @@
     </div>
   </div>
 
+  <!-- 编辑档案弹窗 -->
+  <div class="modal-overlay" id="edit-profile-modal" onclick="this.classList.contains('show')&&event.target===this&&closeModal('edit-profile-modal')">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title">✏️ 编辑档案</div>
+      <div class="input-group">
+        <label>姓名</label>
+        <input class="input-field" id="ep-name" placeholder="请输入姓名">
+      </div>
+      <div class="input-group">
+        <label>性别</label>
+        <select class="input-field" id="ep-gender">
+          <option value="">不填</option>
+          <option value="男">男</option>
+          <option value="女">女</option>
+        </select>
+      </div>
+      <div class="input-group city-select">
+        <label>现居城市</label>
+        <select class="input-field" id="ep-ccity">
+          <option value="">选择城市...</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>MBTI（可选）</label>
+        <input class="input-field" id="ep-mbti" placeholder="如：INFP">
+      </div>
+      <button class="btn-primary" id="btn-save" onclick="saveProfile()">
+        💾 保存修改
+      </button>
+    </div>
+  </div>
+
 
 
   <script src="/static/common.js"></script>
@@ -496,6 +529,7 @@
              data-id="${p.id}" onclick="selectProfile(${p.id})">
           ${signEmoji(p.sun_sign_cn)} ${p.name}
           <span style="font-size:10px;opacity:.6">${p.relationship}</span>
+          <span style="font-size:11px;opacity:.7;margin-left:2px" onclick="event.stopPropagation();openEditProfile(${p.id})" title="编辑">✏️</span>
         </div>
       `).join('') + `<button class="p-chip-add" onclick="openModal('add-profile-modal')">＋</button>`;
     }
@@ -613,6 +647,51 @@
       e.preventDefault();
       if (!currentProfileId) { toast('请先选择档案', 'info'); return; }
       location.href = '/static/star-chart.html';
+    }
+
+    // ── 编辑档案 ──────────────────────────────────────
+    let editingProfileId = null;
+
+    function openEditProfile(profileId) {
+      editingProfileId = profileId;
+      const p = profiles.find(p => p.id === profileId);
+      if (!p) return;
+      document.getElementById('ep-name').value = p.name || '';
+      document.getElementById('ep-gender').value = p.gender || '';
+      document.getElementById('ep-mbti').value = p.mbti || '';
+      // 复用已加载的城市下拉数据
+      const src = document.getElementById('p-ccity');
+      const dst = document.getElementById('ep-ccity');
+      dst.innerHTML = src.innerHTML;
+      dst.value = p.current_city || '';
+      openModal('edit-profile-modal');
+    }
+
+    async function saveProfile() {
+      const name = document.getElementById('ep-name').value.trim();
+      const gender = document.getElementById('ep-gender').value;
+      const ccity = document.getElementById('ep-ccity').value;
+      const mbti = document.getElementById('ep-mbti').value.trim();
+      if (!name) { toast('姓名不能为空', 'error'); return; }
+      const btn = document.getElementById('btn-save');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> 保存中...';
+      try {
+        await api.put(`/api/profile/${editingProfileId}`, {
+          name,
+          gender: gender || null,
+          current_city: ccity || null,
+          mbti: mbti || null,
+        });
+        toast('修改成功', 'success');
+        closeModal('edit-profile-modal');
+        await loadProfiles();
+        selectProfile(editingProfileId);
+      } catch (e) { toast(e.message, 'error'); }
+      finally {
+        btn.disabled = false;
+        btn.innerHTML = '💾 保存修改';
+      }
     }
 
     // ── 新建档案 ──────────────────────────────────────

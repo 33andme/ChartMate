@@ -115,7 +115,7 @@ class UserAdmin(ModelView, model=User):
         with DBSession(engine) as sess:
             uid = int(pk)
 
-            # 1. 对话记录
+            # 1. AI 对话记录
             for item in sess.exec(select(ChatLog).where(ChatLog.user_id == uid)).all():
                 sess.delete(item)
 
@@ -148,6 +148,25 @@ class UserAdmin(ModelView, model=User):
                     select(VerifyCode).where(VerifyCode.email == user_obj.email)
                 ).all():
                     sess.delete(vc)
+
+            # 6. 用户聊天消息 & 聊天室
+            # 必须先删 chat_messages（sender_id 外键），再删 chat_rooms
+            rooms = sess.exec(
+                select(ChatRoom).where(
+                    (ChatRoom.user1_id == uid) | (ChatRoom.user2_id == uid)
+                )
+            ).all()
+            for room in rooms:
+                for msg in sess.exec(select(ChatMessage).where(ChatMessage.room_id == room.id)).all():
+                    sess.delete(msg)
+                sess.delete(room)
+            # 删除用户在其他房间发送的消息（理论上已被上面覆盖，保险起见再清一次）
+            for msg in sess.exec(select(ChatMessage).where(ChatMessage.sender_id == uid)).all():
+                sess.delete(msg)
+
+            # 7. AI 记忆
+            for mem in sess.exec(select(UserMemory).where(UserMemory.user_id == uid)).all():
+                sess.delete(mem)
 
             sess.commit()
 
@@ -671,6 +690,30 @@ def create_profile(
     }
 
 
+@app.put("/api/profile/{profile_id}", summary="修改档案")
+def update_profile(
+    profile_id: int,
+    req: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    profile = session.get(Profile, profile_id)
+    if not profile or profile.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="档案不存在")
+    if req.name is not None:
+        profile.name = req.name
+    if req.current_city is not None:
+        profile.current_city = req.current_city
+    if req.gender is not None:
+        profile.gender = req.gender
+    if req.mbti is not None:
+        profile.mbti = req.mbti
+    session.add(profile)
+    session.commit()
+    session.refresh(profile)
+    return {"message": "修改成功", "profile": profile_to_dict(profile)}
+
+
 @app.get("/api/profile", summary="获取我的所有档案")
 def get_profiles(
     current_user: User = Depends(get_current_user),
@@ -949,6 +992,7 @@ async def call_ai_with_tools(
         "max_tokens": 1500,
     }
 
+    # 最多循环 3 轮：每轮模型可能触发工具调用，结果回填后继续；finish_reason=stop 时直接返回
     for _ in range(3):
         data = await _post_ai(payload)
         choice = data["choices"][0]
@@ -1068,7 +1112,7 @@ async def chat(
             user_message=req.message,
             system_prompt=system_prompt,
             model=model,
-            context={"profile": profile, "session": session, "user": current_user},
+            context={"profile": profile, "user": current_user},
             history_logs=history,
             rag_query=req.message,
         )
@@ -1099,6 +1143,7 @@ async def chat(
     session.commit()
 
     # 异步提取记忆（不阻塞响应）
+    # create_task 让记忆提取在后台运行，不会延迟 API 返回
     conversation_for_memory = [
         {"role": "user" if log.role == "user" else "assistant", "content": log.content}
         for log in history
@@ -1356,6 +1401,7 @@ def add_friend(
         raise HTTPException(status_code=400, detail="不能添加自己为好友")
 
     # 确保user1_id < user2_id，避免重复聊天室
+    # 同一对用户 (A,B) 和 (B,A) 始终映射到同一行，依赖 UniqueConstraint("user1_id","user2_id")
     user1_id = min(current_user.id, request.friend_id)
     user2_id = max(current_user.id, request.friend_id)
 
