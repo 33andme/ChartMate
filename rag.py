@@ -20,11 +20,15 @@ def _get_embeddings():
     global _embeddings
     if _embeddings is not None:
         return _embeddings
+    import httpx
     from langchain_openai import OpenAIEmbeddings
     _embeddings = OpenAIEmbeddings(
         model="BAAI/bge-m3",
         openai_api_key=os.getenv("AI_API_KEY", ""),
         openai_api_base=os.getenv("AI_BASE_URL", "https://api.siliconflow.cn/v1"),
+        tiktoken_enabled=False,
+        check_embedding_ctx_length=False,
+        http_client=httpx.Client(trust_env=False),
     )
     return _embeddings
 

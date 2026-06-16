@@ -232,6 +232,32 @@ class DailyFortuneAdmin(ModelView, model=DailyFortune):
     icon = "fa-solid fa-star"
 
 
+class UserMemoryAdmin(ModelView, model=UserMemory):
+    column_list = [UserMemory.id, UserMemory.user_id, UserMemory.profile_id, UserMemory.memory_type, UserMemory.content, UserMemory.updated_at]
+    column_sortable_list = [UserMemory.id, UserMemory.user_id, UserMemory.memory_type, UserMemory.updated_at]
+    column_searchable_list = [UserMemory.content]
+    name = "用户记忆"
+    name_plural = "用户记忆"
+    icon = "fa-solid fa-brain"
+
+
+class ChatRoomAdmin(ModelView, model=ChatRoom):
+    column_list = [ChatRoom.id, ChatRoom.user1_id, ChatRoom.user2_id, ChatRoom.last_message_at, ChatRoom.created_at]
+    column_sortable_list = [ChatRoom.id, ChatRoom.last_message_at, ChatRoom.created_at]
+    name = "聊天室"
+    name_plural = "聊天室"
+    icon = "fa-solid fa-comments"
+
+
+class ChatMessageAdmin(ModelView, model=ChatMessage):
+    column_list = [ChatMessage.id, ChatMessage.room_id, ChatMessage.sender_id, ChatMessage.message_type, ChatMessage.content, ChatMessage.is_read, ChatMessage.created_at]
+    column_sortable_list = [ChatMessage.id, ChatMessage.room_id, ChatMessage.created_at]
+    column_searchable_list = [ChatMessage.content]
+    name = "聊天消息"
+    name_plural = "聊天消息"
+    icon = "fa-solid fa-message"
+
+
 _KNOWLEDGE_UPLOAD_HTML = """
 <!DOCTYPE html>
 <html lang="zh">
@@ -462,6 +488,9 @@ admin.add_view(ProfileAdmin)
 admin.add_view(PostAdmin)
 admin.add_view(ChatLogAdmin)
 admin.add_view(DailyFortuneAdmin)
+admin.add_view(UserMemoryAdmin)
+admin.add_view(ChatRoomAdmin)
+admin.add_view(ChatMessageAdmin)
 admin.add_view(KnowledgeAdmin)
 
 
